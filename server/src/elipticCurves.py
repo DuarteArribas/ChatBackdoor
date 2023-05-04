@@ -41,5 +41,20 @@ class ElipticCurves:
         raise ValueError
     return x % n
   
+  def bit_length(self,n):
+    """This function returns the number of bits of self"""
+    s = bin(n)       # binary representation:  bin(-37) --> '-0b100101'
+    s = s.lstrip('-0b') # remove leading zeros and minus sign
+    return len(s)       # len('100101') --> 6
   
-  
+  def multiplyPointByScalar(self,p,n):
+     nbits = self.bit_length(n)
+     result = (p[0],p[1])
+     p1 = (p[0],p[1])
+
+     for i in range(1, nbits):
+       result = self.doublePoint(p)
+       bit = (n >> (nbits-i-1) ) & 1
+       if bit == 1 :
+         result = self.sum(p1)
+     return result
