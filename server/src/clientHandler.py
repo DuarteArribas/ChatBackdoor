@@ -1,9 +1,11 @@
+import secrets
+from src.elipticCurves import EllipticCurves
 class ClientHandler:
   # == Methods ==
   def __init__(self):
     """Initalize handler."""
     self.CLIENT_HANDLER_METHOD = {
-      1: self.authenticate
+      0: self.registerChap1
     }
 
   def process(self,option,args = None):
@@ -28,5 +30,22 @@ class ClientHandler:
   # Implementation of the CHAP protocol for authentication
   # Server will verify the authentication of the client
   # Client will send an authentication request
-  def authenticate(self,args):
-    return {"code": 1, "args": "arroz"}
+
+  # Code 0 == success, 1 == Failure
+  def registerChap1(self,args):
+    ec = EllipticCurves()
+    keys = ec.generateKeys()
+    
+    
+    
+    return {'code': 0,'args': keys[0]}
+
+
+  def authenticateParaDepois(self):
+    nonce = secrets.randbits(128)
+
+    
+    return {'code': 0,'args': nonce}
+    
+    
+

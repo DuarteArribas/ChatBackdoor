@@ -1,6 +1,11 @@
+import secrets
+
 class ElipticCurves:
   def __init__(self):
-    """Initialize the Eliptic Curves parameters (P-256)."""
+    """
+    Initialize the Eliptic Curves parameters (P-256). Values taken from
+    https://neuromancer.sk/std/nist/P-256#
+    """
     self.a = 0xffffffff00000001000000000000000000000000fffffffffffffffffffffffc
     self.b = 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b
     self.p = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff
@@ -9,9 +14,23 @@ class ElipticCurves:
     self.G = (0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296, 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)
     
   def sum(self,p1,p2):
+    """
+    Execute eliptic curve sum between two points.
+    
+    Input
+    ---
+    - p1 - first point (x, y)
+    - p2 - second point (x, y)
+
+    Output
+    ---
+    - (x3, y3) - the summed point
+    """
     if p1[0] == p2[0]:
       if p1[1] == p2[1]:
+        # if the points have the same coordinates, return itself
         return self.doublePoint(p1)
+      # if the points have the same x coordinates, but different y coordinates, return a null point
       return (None,None)
     s = ((p2[1] - p1[1]) * self.modInverse( p2[0] - p1[0] + self.p, self.p )) % self.p
     x3 = ((s * s) - p1[0] - p2[0]) % self.p
@@ -56,5 +75,10 @@ class ElipticCurves:
        result = self.doublePoint(p)
        bit = (n >> (nbits-i-1) ) & 1
        if bit == 1 :
-         result = self.sum(p1)
+         result = self.sum(p1,p)
      return result
+  
+  def generateKeys(self):
+    dA = secrets.randbelow(self.n - 1) + 1
+    X = self.multiplyPointByScalar(self.G,dA)
+    return (X,dA)

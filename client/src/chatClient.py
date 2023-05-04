@@ -48,7 +48,8 @@ class ChatClient:
     args   : list
       The upload arguments
     """
-    if option == "a":
+    if option == "chapRegister":
+      chapRegister()
       self.socket.send(pickle.dumps(OptionArgs(1,(args))))
       response = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
       print(response)
