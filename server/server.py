@@ -1,5 +1,5 @@
 from configparser import ConfigParser
-from server.src.chatServer import *
+from src.chatServer import *
 
 def main():
   # read configuration from config file

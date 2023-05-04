@@ -1,6 +1,6 @@
 import socket
 import pickle
-from client.src.utils.optionArgs import *
+from src.utils.optionArgs import *
 
 class ChatClient:
   """Arroz.

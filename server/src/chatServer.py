@@ -1,8 +1,8 @@
 import socket
 import pickle
 from _thread import *
-from server.src.utils.optionArgs import *
-from server.src.clientHandler    import *
+from src.utils.optionArgs import *
+from src.clientHandler    import *
 
 class ChatServer:
   # == Attributes ==

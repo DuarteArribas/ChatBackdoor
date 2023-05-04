@@ -1,5 +1,5 @@
 from configparser import ConfigParser
-from client.src.chatClient import *
+from src.chatClient import *
 
 def main():
   # read configuration from config file
