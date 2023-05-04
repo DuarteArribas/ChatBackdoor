@@ -5,8 +5,15 @@ from src.utils.optionArgs import *
 from src.clientHandler    import *
 
 class ChatServer:
+  """
+  Attributes
+  ----------
+  NUMBER_BYTES_TO_RECEIVE : int
+    The max number of bytes to receive
+  """
   # == Attributes ==
   NUMBER_BYTES_TO_RECEIVE = 16384
+  
   # == Methods ==
   def __init__(self,ip,port,maxClients,con,cur):
     """Server initialization.
