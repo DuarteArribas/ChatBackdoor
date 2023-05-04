@@ -1,6 +1,8 @@
 import socket
 import pickle
+import hashlib
 from src.utils.optionArgs import *
+from src.ellipticCurves   import *
 
 class ChatClient:
   """
@@ -48,14 +50,16 @@ class ChatClient:
       The upload arguments
     """
     if option == "chapRegister":
-      self.chapRegister()
-      
-      
-      
+      self.chapRegister()      
       
   def chapRegister(self):
     username = input("Username: ")
     self.socket.send(pickle.dumps(OptionArgs(0,(username)))) #! se isto bugar e da ,
     X = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
-    
-    print(response)
+    ec = EllipticCurves()
+    keys = ec.generateKeys()
+    self.socket.send(pickle.dumps(OptionArgs(1,(keys[0]))))
+    keyPoint = ec.multiplyPointByScalar(X,keys[1])
+    key = str(keyPoint[0]) + str(keyPoint[1])
+    with open(f"in/{username}","w") as f:
+      f.write(key)

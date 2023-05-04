@@ -1,5 +1,5 @@
 import secrets
-from src.elipticCurves import EllipticCurves
+from src.ellipticCurves import EllipticCurves
 class ClientHandler:
   # == Methods ==
   def __init__(self,con,cur):
