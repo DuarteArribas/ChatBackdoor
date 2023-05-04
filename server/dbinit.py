@@ -2,14 +2,14 @@ import sqlite3
 import sys
 from configparser import ConfigParser
 
-CONFIG_FILE = "config/serverconf.cfg"
+CONFIG_FILE = "server/config/serverconf.cfg"
 
 def main():
   # Read config file
   cfg = ConfigParser()
   cfg.read(CONFIG_FILE)
   # Get a connection to the local database and cursor
-  con = sqlite3.connect(cfg.get("LOCAL_DATABASE_FILE"))
+  con = sqlite3.connect(cfg.get("APP","LOCAL_DATABASE_FILE"))
   cur = con.cursor()
   # Create table
   try:

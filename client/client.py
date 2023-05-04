@@ -9,7 +9,7 @@ def main():
     cfg.get("APP","IP"),
     cfg.get("APP","PORT")
   )
-  client.runClient(["a","test.txt","test.txt"])
+  client.runClient("chap")
   
 if __name__ == '__main__':
   main()

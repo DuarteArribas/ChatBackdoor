@@ -2,11 +2,13 @@ import secrets
 from src.elipticCurves import EllipticCurves
 class ClientHandler:
   # == Methods ==
-  def __init__(self):
+  def __init__(self,con,cur):
     """Initalize handler."""
     self.CLIENT_HANDLER_METHOD = {
       0: self.registerChap1
     }
+    self.con = con
+    self.cur = cur
 
   def process(self,option,args = None):
     """Process an option received by the client and call the appropriate client handler method.
@@ -35,11 +37,9 @@ class ClientHandler:
   def registerChap1(self,args):
     ec = EllipticCurves()
     keys = ec.generateKeys()
-    
-    
-    
+    #TODO: allow SQL injections 😈
+    self.cur.execute("INSERT INTO users (username, dA) VALUES (?,?)",(args[0],keys[1]))
     return {'code': 0,'args': keys[0]}
-
 
   def authenticateParaDepois(self):
     nonce = secrets.randbits(128)

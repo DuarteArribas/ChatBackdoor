@@ -3,8 +3,7 @@ import pickle
 from src.utils.optionArgs import *
 
 class ChatClient:
-  """Arroz.
-  
+  """
   Attributes
   ----------
   NUMBER_BYTES_TO_RECEIVE : int
@@ -25,7 +24,7 @@ class ChatClient:
     self.ip   = ip
     self.port = int(port)
 
-  def runClient(self,arguments):
+  def runClient(self,option):
     """Run the client.
     
     Parameters
@@ -37,9 +36,9 @@ class ChatClient:
     with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
       self.socket = s
       s.connect((self.ip,self.port))
-      self._handleClientActions(arguments[0],arguments[1:])
+      self._handleClientActions(option)
 
-  def _handleClientActions(self,option,args):
+  def _handleClientActions(self,option):
     """Handle client actions.
     Parameters
     ----------
@@ -49,7 +48,14 @@ class ChatClient:
       The upload arguments
     """
     if option == "chapRegister":
-      chapRegister()
-      self.socket.send(pickle.dumps(OptionArgs(1,(args))))
-      response = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
-      print(response)
+      self.chapRegister()
+      
+      
+      
+      
+  def chapRegister(self):
+    username = input("Username: ")
+    self.socket.send(pickle.dumps(OptionArgs(0,(username)))) #! se isto bugar e da ,
+    X = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
+    
+    print(response)

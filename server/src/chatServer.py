@@ -8,7 +8,7 @@ class ChatServer:
   # == Attributes ==
   NUMBER_BYTES_TO_RECEIVE = 16384
   # == Methods ==
-  def __init__(self,ip,port,maxClients):
+  def __init__(self,ip,port,maxClients,con,cur):
     """Server initialization.
     
     Parameters
@@ -19,12 +19,18 @@ class ChatServer:
       The port to open the server on
     maxClients : int
       The maximum number of clients to handle
+    con        : sqlite3.Connection
+      The connection to the local database
+    cur        : sqlite3.Cursor
+      The cursor to the local database
     """
     self.ip            = ip
     self.port          = int(port)
     self.maxClients    = int(maxClients)
+    self.con           = con
+    self.cur           = cur
     self.listOfClients = []
-    self.clientHandler = ClientHandler()
+    self.clientHandler = ClientHandler(self.con,self.cur)
 
   def runServer(self):
     """Run the server."""
