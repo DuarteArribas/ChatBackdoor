@@ -25,5 +25,8 @@ class ClientHandler:
     else:
       return self.CLIENT_HANDLER_METHOD[option](args)
   
+  # Implementation of the CHAP protocol for authentication
+  # Server will verify the authentication of the client
+  # Client will send an authentication request
   def authenticate(self,args):
     return {"code": 1, "args": "arroz"}
