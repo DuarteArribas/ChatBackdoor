@@ -2,6 +2,7 @@ import socket
 import pickle
 from _thread import *
 from server.src.utils.optionArgs import *
+from server.src.clientHandler    import *
 
 class ChatServer:
   # == Attributes ==
@@ -23,6 +24,7 @@ class ChatServer:
     self.port          = int(port)
     self.maxClients    = int(maxClients)
     self.listOfClients = []
+    self.clientHandler = ClientHandler()
 
   def runServer(self):
     """Run the server."""
