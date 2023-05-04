@@ -31,6 +31,7 @@ class ChatServer:
     with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
       s.bind((self.ip,self.port))
       s.listen(self.maxClients)
+      print("Server is listening on port " + str(self.port) + "...")
       while True:
         client,clientAddress = s.accept()
         self.listOfClients.append(client)
@@ -43,11 +44,12 @@ class ChatServer:
     client : socketObject
       The client to handle
     """
-    client.send("Welcome to ChatWithBackdoor!")
+    print("Connected to: " + clientAddress[0] + ":" + str(clientAddress[1]))
     while True: 
       try:
         # receive client data
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
+        print(opt_args.option)
         #process client data
         response = self.clientHandler.process(opt_args.option,opt_args.args)
         client.send(pickle.dumps(response))

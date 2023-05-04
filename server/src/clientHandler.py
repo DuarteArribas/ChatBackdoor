@@ -25,5 +25,5 @@ class ClientHandler:
     else:
       return self.CLIENT_HANDLER_METHOD[option](args)
   
-  def authenticate(self):
+  def authenticate(self,args):
     return {"code": 1, "args": "arroz"}
