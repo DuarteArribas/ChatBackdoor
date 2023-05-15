@@ -5,6 +5,7 @@ from Crypto.Hash          import SHA512
 from Crypto.Cipher        import AES
 from base64               import b64decode
 from Crypto.Util.Padding  import unpad
+from src.chap             import Chap
 
 class ClientHandler:
   # == Methods ==
@@ -20,7 +21,9 @@ class ClientHandler:
     """
     self.CLIENT_HANDLER_METHOD = {
       0: self.registerChap1,
-      1: self.registerChap2
+      1: self.registerChap2,
+      2: self.loginChap1,
+      3: self.loginChap2
     }
     self.con = con
     self.cur = cur
@@ -137,6 +140,7 @@ class ClientHandler:
       derivedPasswordKey = self.deriveKeysDecryption(Y,dA,salt)
       secret             = self.decryptPassword(derivedPasswordKey,iv,ciphertext)
       self.saveUserSecret(secret,args[1])
+      return {'code': 0,'args': "User registered successfully."}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
   
@@ -195,7 +199,7 @@ class ClientHandler:
     cipher = AES.new(derivedPasswordKey,AES.MODE_CBC,iv)
     ciphertext_decoded = b64decode(cipherText)
     # Unpadding the resulting plaintext obtained from the decryption, returns the secret
-    return unpad(cipher.decrypt(ciphertext_decoded),AES.block_size)
+    return unpad(cipher.decrypt(ciphertext_decoded),AES.block_size).decode("utf-8") 
   
   def saveUserSecret(self, secret, username):
     """Save user's secret in the DB.
@@ -207,11 +211,11 @@ class ClientHandler:
     username: str
       The username of the user to save the secret
     """
-    self.cur.execute("UPDATE users SET password = ? AND temp = ? WHERE username LIKE ?;",(secret,0,username))
+    self.cur.execute("UPDATE users SET password = ?, temp = ? WHERE username LIKE ?;",(secret,0,username))
     self.con.commit()
   
-  def authenticateParaDepois(self):
-    """ALERTA: POR FAZER. Authenticate client in the login process.
+  def loginChap1(self,args):
+    """Authenticate client in the login process.
     
     Parameters
     ----------
@@ -225,8 +229,79 @@ class ClientHandler:
     dict
       With a success code (0) and the nonce
     """
-    nonce = secrets.randbits(128)
+    username = args[0]
+    if not self.isUserAlreadyInDB(username):
+      return {'code': 1,'args': "User is not yet registered. Register instead!"}
+    nonce    = str(secrets.randbits(128))
+    self.saveUserNonce(username,nonce)
     return {'code': 0,'args': nonce}
+  
+  def saveUserNonce(self,username,nonce):
+    """Save user's nonce in the database.
     
+    Parameters
+    ----------
+    username : str
+      The username of the user to save the nonce
+    nonce    : int
+      The nonce to be saved
+    """
+    self.cur.execute("UPDATE users SET chapNonce = ? WHERE username LIKE ?;",(nonce,username))
+    self.con.commit()
+  
+  def loginChap2(self,args):
+    """Authenticate client in the login process.
     
+    Parameters
+    ----------
+    username : str
+      Client's username
+    dA : int
+      Client's "private" key
+ 
+    Return
+    ----------
+    dict
+      With a success code (0) and the nonce
+    """
+    username  = args[0]
+    challenge = args[1]
+    secret    = self.getUserSecret(username)
+    nonce     = self.getUserNonce(username)
+    if challenge == Chap.getChapChallenge(nonce,secret):
+      return {'code': 0,'args': "Authentication successful."}
+    else:
+      return {'code': 1,'args': "Authentication failed."}
 
+  def getUserSecret(self, username):
+    """Returns user Secret
+      
+    Parameters
+    ----------
+    username : str
+      Client's username
+  
+    Return
+    ----------
+    Str
+      Secret stored in database
+    """
+    print(username)
+    res = self.cur.execute("SELECT password FROM users WHERE username LIKE ?;",(username,))
+    return res.fetchall()[0][0]
+
+  def getUserNonce(self, username):
+    """Return user Nonce.
+      
+    Parameters
+    ----------
+    username : str
+      Client's username
+
+    Return
+    ----------
+    str
+      Nonce stored in database
+    """
+    res = self.cur.execute("SELECT chapNonce FROM users WHERE username LIKE ?;",(username,))
+    return res.fetchall()[0][0]

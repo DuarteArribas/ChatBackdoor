@@ -8,6 +8,7 @@ from Crypto.Random        import get_random_bytes
 from Crypto.Cipher        import AES
 from base64               import b64encode
 from Crypto.Util.Padding  import pad
+from src.chap             import Chap
 
 class ChatClient:
   """
@@ -57,6 +58,8 @@ class ChatClient:
     """
     if option == 1:
       self.chapRegister()
+    elif option == 2:
+      self.chapLogin()
       
   def chapRegister(self):
     username = input("Username: (0 to exit) ")
@@ -87,3 +90,30 @@ class ChatClient:
     self.socket.send(pickle.dumps(OptionArgs(1,(keys[0],username,salt,iv,cipherText))))
     optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
     print(optionArgs["args"])
+  
+  def chapLogin(self):
+    username = input("Username: (0 to exit) ")
+    if username == "0":
+      return
+    self.socket.send(pickle.dumps(OptionArgs(2,(username,))))
+    optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
+    while optionArgs["code"] == 1:
+      print(optionArgs["args"])
+      username = input("Username: (0 to exit) ")
+      if username == "0":
+        return
+      self.socket.send(pickle.dumps(OptionArgs(2,(username,))))
+      optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
+    nonce = optionArgs["args"]
+    password = input("Password: (0 to exit) ")
+    if password == "0":
+      return
+    challenge = Chap.getChapChallenge(nonce,password)
+    self.socket.send(pickle.dumps(OptionArgs(3,(username,challenge))))
+    optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
+    if optionArgs["code"] == 1:
+      print(optionArgs["args"])
+      return
+    elif optionArgs["code"] == 0:
+      print(optionArgs["args"])
+      return
