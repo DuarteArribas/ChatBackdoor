@@ -13,7 +13,7 @@ def main():
   cur = con.cursor()
   # Create table
   try:
-    cur.execute("CREATE TABLE users(username VARCHAR PRIMARY KEY,chapSecret VARCHAR, dA VARCHAR)")
+    cur.execute("CREATE TABLE users(username VARCHAR PRIMARY KEY,password VARCHAR, dA TEXT,temp INTEGER)")
     con.commit()
     print("Database created successfully!")
   except sqlite3.OperationalError:

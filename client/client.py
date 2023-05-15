@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 from src.chatClient import *
+from src.menu import *
 
 def main():
   # read configuration from config file
@@ -9,7 +10,11 @@ def main():
     cfg.get("APP","IP"),
     cfg.get("APP","PORT")
   )
-  client.runClient("chap")
+  option = -1
+  while option != 0:
+    Menu.printInitialMenu()
+    option = Menu.getInitialMenuOption()
+    client.runClient(option)
   
 if __name__ == '__main__':
   main()

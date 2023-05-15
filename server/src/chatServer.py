@@ -55,7 +55,6 @@ class ChatServer:
       try:
         # receive client data
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
-        print(opt_args.option)
         #process client data
         response = self.clientHandler.process(opt_args.option,opt_args.args)
         client.send(pickle.dumps(response))

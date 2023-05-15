@@ -7,7 +7,7 @@ def main():
   cfg    = ConfigParser()
   cfg.read("server/config/serverconf.cfg")
   # Get a connection to the local database and cursor
-  con = sqlite3.connect(cfg.get("APP","LOCAL_DATABASE_FILE"))
+  con = sqlite3.connect(cfg.get("APP","LOCAL_DATABASE_FILE"),check_same_thread = False)
   cur = con.cursor()
   # initialize server
   server = ChatServer(

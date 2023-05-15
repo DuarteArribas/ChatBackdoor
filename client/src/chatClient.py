@@ -1,8 +1,13 @@
 import socket
 import pickle
-import hashlib
 from src.utils.optionArgs import *
 from src.ellipticCurves   import *
+from Crypto.Protocol.KDF  import PBKDF2
+from Crypto.Hash          import SHA512
+from Crypto.Random        import get_random_bytes
+from Crypto.Cipher        import AES
+from base64               import b64encode
+from Crypto.Util.Padding  import pad
 
 class ChatClient:
   """
@@ -25,7 +30,7 @@ class ChatClient:
     """
     self.ip   = ip
     self.port = int(port)
-
+  
   def runClient(self,option):
     """Run the client.
     
@@ -49,17 +54,35 @@ class ChatClient:
     args   : list
       The upload arguments
     """
-    if option == "chapRegister":
-      self.chapRegister()      
+    if option == 1:
+      self.chapRegister()
       
   def chapRegister(self):
-    username = input("Username: ")
-    self.socket.send(pickle.dumps(OptionArgs(0,(username)))) #! se isto bugar e da ,
-    X = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
+    username = input("Username: (0 to exit) ")
+    if username == "0":
+      return
+    self.socket.send(pickle.dumps(OptionArgs(0,(username,))))
+    optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
+    while optionArgs["code"] == 1:
+      print(optionArgs["args"])
+      username = input("Username: (0 to exit) ")
+      if username == "0":
+        return
+      self.socket.send(pickle.dumps(OptionArgs(0,(username,))))
+      optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
     ec = EllipticCurves()
     keys = ec.generateKeys()
-    self.socket.send(pickle.dumps(OptionArgs(1,(keys[0]))))
-    keyPoint = ec.multiplyPointByScalar(X,keys[1])
-    key = str(keyPoint[0]) + str(keyPoint[1])
-    with open(f"in/{username}","w") as f:
-      f.write(key)
+    keyPoint = ec.multiplyPointByScalar(optionArgs['args'],keys[1])
+    key = str(keyPoint[0])
+    password = input("Password: (0 to exit) ")
+    if password == "0":
+      return
+    salt = get_random_bytes(16)
+    derivedPasswordKey = PBKDF2(key,salt,16,count=1000000,hmac_hash_module=SHA512)
+    iv = get_random_bytes(16)
+    cipher = AES.new(derivedPasswordKey,AES.MODE_CBC,iv)
+    cipherTextBytes = cipher.encrypt(pad(password.encode('utf-8'),AES.block_size))
+    cipherText = b64encode(cipherTextBytes).decode('utf-8')
+    self.socket.send(pickle.dumps(OptionArgs(1,(keys[0],username,salt,iv,cipherText))))
+    optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
+    print(optionArgs["args"])
