@@ -9,7 +9,15 @@ from Crypto.Util.Padding  import unpad
 class ClientHandler:
   # == Methods ==
   def __init__(self,con,cur):
-    """Initalize handler."""
+    """Initalize handler.
+    
+    Parameters
+    ----------
+    con : sqlite3.Connection
+      The connection to the local database
+    cur : sqlite3.Cursor
+      The cursor to the local database
+    """
     self.CLIENT_HANDLER_METHOD = {
       0: self.registerChap1,
       1: self.registerChap2

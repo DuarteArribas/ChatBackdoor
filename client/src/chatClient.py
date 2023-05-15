@@ -18,6 +18,7 @@ class ChatClient:
   """
   # == Attributes ==
   NUMBER_BYTES_TO_RECEIVE = 16384
+  
   # == Methods ==
   def __init__(self,ip,port):
     """Initialize a socket connection with the server.
