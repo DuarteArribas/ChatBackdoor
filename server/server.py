@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 from configparser import ConfigParser
 from src.chatServer import *
 
@@ -13,12 +14,16 @@ def main():
   server = ChatServer(
     cfg.get("APP","IP"),
     cfg.get("APP","PORT"),
+    cfg.get("APP","PORT2"),
     cfg.get("APP","MAX_CLIENTS"),
     con,
     cur
   )
   # run server
-  server.runServer()
+  thread1 = threading.Thread(target = server.runServer)
+  thread2 = threading.Thread(target = server.runKeyServer)
+  thread1.start()
+  thread2.start()
 
 if __name__ == '__main__':
   main()

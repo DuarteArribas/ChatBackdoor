@@ -1,4 +1,5 @@
 import secrets
+import pickle
 from src.ellipticCurves import EllipticCurves
 from Crypto.Protocol.KDF  import PBKDF2
 from Crypto.Hash          import SHA512
@@ -9,7 +10,7 @@ from src.chap             import Chap
 
 class ClientHandler:
   # == Methods ==
-  def __init__(self,con,cur):
+  def __init__(self,con,cur,connectedClients,client,listOfClients,hosts,hosts2,client2,listOfClients2):
     """Initalize handler.
     
     Parameters
@@ -26,10 +27,22 @@ class ClientHandler:
       3: self.loginChap2,
       4: self.addFriend,
       5: self.getFriendRequests,
-      6: self.acceptRejectFriends
+      6: self.acceptRejectFriends,
+      7: self.showFriendsList,
+      8: self.removeFriend,
+      9: self.logout,
+      10: self.exchangeKeys1,
+      11: self.exchangeKeys2
     }
     self.con = con
     self.cur = cur
+    self.connectedClients = connectedClients
+    self.client = client
+    self.listOfClients = listOfClients
+    self.hosts = hosts
+    self.hosts2 = hosts2
+    self.client2 = client2
+    self.listOfClients2 = listOfClients2
 
   def process(self,option,args = None):
     """Process an option received by the client and call the appropriate client handler method.
@@ -267,14 +280,24 @@ class ClientHandler:
     dict
       With a success code (0) and the nonce
     """
-    username  = args[0]
-    challenge = args[1]
-    secret    = self.getUserSecret(username)
-    nonce     = self.getUserNonce(username)
-    if challenge == Chap.getChapChallenge(nonce,secret):
-      return {'code': 0,'args': "Authentication successful."}
-    else:
-      return {'code': 1,'args': "Authentication failed."}
+    try:
+      username  = args[0]
+      challenge = args[1]
+      secret    = self.getUserSecret(username)
+      nonce     = self.getUserNonce(username)
+      if challenge == Chap.getChapChallenge(nonce,secret):
+        self.connectedClients.append(username)
+        for client in self.listOfClients:
+          if client == self.client[0]:
+            self.hosts.append((client,username))
+        for client in self.listOfClients2:
+          if client == self.client2[0]:
+            self.hosts2.append((client,username))
+        return {'code': 0,'args': "Authentication successful."}
+      else:
+        return {'code': 1,'args': "Authentication failed."}
+    except Exception as e:
+      print(e)
 
   def getUserSecret(self, username):
     """Returns user Secret
@@ -309,6 +332,23 @@ class ClientHandler:
     return res.fetchall()[0][0]
   
   def addFriend(self,args):
+    """Add friend to the friend's list in the database.
+
+    Parameters
+    ----------
+    args : tuple
+      Username from the current user and friend's username
+    
+    Return
+    ----------
+    dict
+      code : int
+        0 if successful
+        1 if unsuccessful
+      args : str
+        exception message if unsuccessful
+        success message if successful
+    """
     try:
       username,friendUsername = args[0],args[1]
       if not self.isUserLoggedInDB(friendUsername):
@@ -324,18 +364,75 @@ class ClientHandler:
     return {'code': 0,'args': "Friend request sent."}
   
   def isUserLoggedInDB(self,username):
+    """Verify if a user is already logged in in the database.
+
+    Parameters
+    ----------
+    username : str
+      The username of the current user
+    
+    Return
+    ----------
+    str
+      If the user is logged in returns the username
+    """
     res = self.cur.execute("SELECT username FROM users WHERE username LIKE ? AND temp = ?;",(username,0))
     return res.fetchall() != []
   
   def isFriendRequested(self,username,friendUsername):
+    """Verify if a friend request was already sent/received.
+    
+    Parameters
+    ----------
+    username : str
+      The username of the current user
+    friendUsername : str
+      The username of the friend to add
+    
+    Return
+    ----------
+    str
+      If the user has a request sent/received returns the usernames
+    """
     res = self.cur.execute("SELECT username1,username2 FROM friends WHERE username1 LIKE ? AND username2 LIKE ? AND acceptance = ?;",(username,friendUsername,0))
     return res.fetchall() != []
   
   def areFriends(self,username,friendUsername):
+    """Verify if two users are already friends.
+    
+    Parameters
+    ----------
+    username : str
+      The username of the current user
+    friendUsername : str
+      The username of the friend
+    
+    Return
+    ----------
+    str
+      If the users are already friends returns the usernames
+    """
     res = self.cur.execute("SELECT username1,username2 FROM friends WHERE username1 LIKE ? AND username2 LIKE ? AND acceptance = ?;",(username,friendUsername,1))
     return res.fetchall() != []
   
   def getFriendRequests(self,args):
+    """Get friend requests from the database.
+    
+    Parameters
+    ----------
+    args : tuple
+      Username from the current user
+    
+    Return
+    ----------
+    dict
+      code : int
+        0 if successful
+        1 if unsuccessful
+      args : str
+        exception message if unsuccessful
+        list of friend requests if successful
+    """
     username = args[0]
     res = self.cur.execute("SELECT username1 FROM friends WHERE username2 LIKE ? AND acceptance = ?;",(username,0))
     results = res.fetchall()
@@ -345,9 +442,28 @@ class ClientHandler:
       return {'code': 0,'args': results}
   
   def acceptRejectFriends(self,args):
+    """Accept or reject friend requests from the list of friend requests.
+    
+    Parameters
+    ----------
+    args : tuple
+      args[0] = username
+      args[1] = list of friends to accept
+      args[2] = list of friends to reject
+    
+    Return
+    ----------
+    dict
+      code : int
+        0 if successful
+        1 if unsuccessful
+      args : str
+        confirmation of acceptance/rejection of friend requests if successful
+        exception message if unsuccessful
+    """
     try:
       username        = args[0]
-      friendsToAccept  = args[1]
+      friendsToAccept = args[1]
       friendsToReject = args[2]
       for friend in friendsToAccept:
         self.cur.execute("UPDATE friends SET acceptance = ? WHERE username1 LIKE ? AND username2 LIKE ?;",(1,friend,username))
@@ -362,4 +478,116 @@ class ClientHandler:
       else:
         return {'code': 0,'args': "Friend requests accepted and rejected."}
     except Exception as e:
-      print(e)
+      return {'code': 1,'args': e}
+  
+  def showFriendsList(self,args):
+    """Show friends list from the database.
+    
+    Parameters
+    ----------
+    args : tuple
+      args[0] = username from the current user
+    
+    Return
+    ----------
+    dict
+      code : int
+        0 if successful
+        1 if unsuccessful
+      args : str
+        list of friends if successful
+        sad message if unsuccessful
+    """
+    username = args[0]
+    res = self.cur.execute("SELECT username1 FROM friends WHERE username2 LIKE ? AND acceptance = ? UNION SELECT username2 FROM friends WHERE username1 LIKE ? AND acceptance = ?;",(username,1,username,1))
+    results = res.fetchall()
+    resultsOnline = []
+    for result in results:
+      if result[0] in self.connectedClients:
+        resultsOnline.append(result[0] + " (online)")
+      else:
+        resultsOnline.append(result[0] + " (offline)")
+    if results == []:
+      return {'code': 1,'args': "Sorry, you've got no friends 😭"}
+    else:
+      return {'code': 0,'args': resultsOnline}
+
+  def removeFriend(self,args):
+    """ Remove single friend from friend requests through its username.
+    
+    Parameters
+    ----------
+    args : tuple
+      args[0] = username of current user
+      args[2] = list of friends to reject
+    
+    Return
+    ----------
+    dict
+      code : int
+        0 if successful
+        1 if unsuccessful
+    """
+    try: 
+      username = args[0]
+      friendUsername = args[1]
+      self.cur.execute("DELETE FROM friends WHERE username1 LIKE ? AND username2 LIKE ?;",(username,friendUsername))
+      self.cur.execute("DELETE FROM friends WHERE username2 LIKE ? AND username1 LIKE ?;",(username,friendUsername))
+      self.con.commit()
+      return {'code': 0,'args': "Friend removed."}
+    except Exception as e:
+      return {'code': 1,'args': "An unknown error occurred. Friend not removed."}
+  
+  def logout(self,args):
+    """Logout from the database. When user logs out, their name is removed from a list containing everyone who's online in the moment. 
+    
+    Parameters
+    ----------
+    args : tuple
+      args[0] = username of current user
+    
+    Return
+    ----------
+    dict
+      code : int
+        0 if successful
+        1 if unsuccessful
+      args : str
+        confirmation of logout if successful
+        exception message if unsuccessful
+    """
+    try:
+      username = args[0]
+      print(self.connectedClients)
+      if username in self.connectedClients:
+        self.connectedClients.remove(username)
+      return {'code': 0,'args': "Logged out."}
+    except Exception as e:
+      return {'code': 1,'args': e}
+    
+  def exchangeKeys1(self,args):
+    try:
+      username = args[0]
+      friendUsername = args[1]
+      X = args[2]
+      cipherMac = args[3]
+      if friendUsername not in self.connectedClients:
+        return {'code': 1,'args': "Friend is not online."}
+      for host,u in self.hosts2:
+        if u == friendUsername:
+          print(host)
+          host.send(pickle.dumps({'code': 2,'args': (username,X,cipherMac)}))
+          return host
+    except Exception as e:
+      print("1: ", e)
+  
+  def exchangeKeys2(self,args):
+    try:
+      username = args[0]
+      Y = args[1]
+      for host,u in self.hosts2:
+        if u == username:
+          print("ENTRAS AQUI CARALHO?")
+          return {'code': 0,'args': (Y,)}
+    except Exception as e:
+      print("2: ",e)

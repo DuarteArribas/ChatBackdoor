@@ -77,7 +77,7 @@ class Menu():
     print("1 - Friend list")
     print("2 - Message a friend")
     print("3 - Check messages")
-    print("0 - Exit")
+    print("0 - Logout")
     print("=============================================")
     
   @staticmethod
@@ -109,9 +109,9 @@ class Menu():
     print("Welcome to your friends page! Which friends are you choosing today?")
     print("1 - Add a friend")
     print("2 - Friend requests")
-    print("3 - Remove friend")
-    print("4 - Check friends list")
-    print("0 - Exit")
+    print("3 - Check friends list")
+    print("4 - Remove friend")
+    print("0 - Return to main menu")
     print("=============================================")
   
   @staticmethod
@@ -136,3 +136,5 @@ class Menu():
       print(f"Please enter a valid option ({Menu.FRIEND_MENU_OPTIONS[0]}-{Menu.FRIEND_MENU_OPTIONS[-1]})!")
       Menu.printFriendMenu()
     return option
+  
+  
