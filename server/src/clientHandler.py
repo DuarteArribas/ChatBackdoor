@@ -23,7 +23,8 @@ class ClientHandler:
       0: self.registerChap1,
       1: self.registerChap2,
       2: self.loginChap1,
-      3: self.loginChap2
+      3: self.loginChap2,
+      4: self.addFriend
     }
     self.con = con
     self.cur = cur
@@ -286,11 +287,10 @@ class ClientHandler:
     Str
       Secret stored in database
     """
-    print(username)
     res = self.cur.execute("SELECT password FROM users WHERE username LIKE ?;",(username,))
     return res.fetchall()[0][0]
 
-  def getUserNonce(self, username):
+  def getUserNonce(self,username):
     """Return user Nonce.
       
     Parameters
@@ -305,3 +305,30 @@ class ClientHandler:
     """
     res = self.cur.execute("SELECT chapNonce FROM users WHERE username LIKE ?;",(username,))
     return res.fetchall()[0][0]
+  
+  def addFriend(self,args):
+    try:
+      username,friendUsername = args[0],args[1]
+      if not self.isUserLoggedInDB(friendUsername):
+        return {'code': 1,'args': "User does not exist."}
+      if self.isFriendRequested(username,friendUsername):
+        return {'code': 1,'args': "Friend request already sent/received."}
+      if self.areFriends(username,friendUsername):
+        return {'code': 1,'args': "You are already friends."}
+      self.cur.execute("INSERT INTO friends (username1,username2,acceptance) VALUES (?,?,?);",(username,friendUsername,0))
+      self.con.commit()
+    except Exception as e:
+      return {'code': 1,'args': e}
+    return {'code': 0,'args': "Friend request sent."}
+  
+  def isUserLoggedInDB(self,username):
+    res = self.cur.execute("SELECT username FROM users WHERE username LIKE ? AND temp = ?;",(username,0))
+    return res.fetchall() != []
+  
+  def isFriendRequested(self,username,friendUsername):
+    res = self.cur.execute("SELECT username1,username2 FROM friends WHERE username1 LIKE ? AND username2 LIKE ? AND acceptance = ?;",(username,friendUsername,0))
+    return res.fetchall() != []
+  
+  def areFriends(self,username,friendUsername):
+    res = self.cur.execute("SELECT username1,username2 FROM friends WHERE username1 LIKE ? AND username2 LIKE ? AND acceptance = ?;",(username,friendUsername,1))
+    return res.fetchall() != []

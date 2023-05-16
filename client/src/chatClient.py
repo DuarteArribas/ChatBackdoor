@@ -9,6 +9,7 @@ from Crypto.Cipher        import AES
 from base64               import b64encode
 from Crypto.Util.Padding  import pad
 from src.chap             import Chap
+from src.menu             import Menu
 
 class ChatClient:
   """
@@ -21,7 +22,7 @@ class ChatClient:
   NUMBER_BYTES_TO_RECEIVE = 16384
   
   # == Methods ==
-  def __init__(self,ip,port):
+  def __init__(self,ip,port,menuHandler):
     """Initialize a socket connection with the server.
     Parameters
     ----------
@@ -30,8 +31,10 @@ class ChatClient:
     port : int
       The port of the server
     """
-    self.ip   = ip
-    self.port = int(port)
+    self.ip          = ip
+    self.port        = int(port)
+    self.menuHandler = menuHandler
+    self.username    = None
   
   def runClient(self,option):
     """Run the client.
@@ -51,15 +54,36 @@ class ChatClient:
     """Handle client actions.
     Parameters
     ----------
-    option : str
+    option   : str
       Upload | Download
-    args   : list
-      The upload arguments
+    currMenu : Menu.MENUS
+      The current menu
     """
-    if option == 1:
-      self.chapRegister()
-    elif option == 2:
-      self.chapLogin()
+    if self.menuHandler.currMenu == Menu.MENUS.INITIAL:
+      if option == 1:
+        self.chapRegister()
+      elif option == 2:
+        self.chapLogin()
+    elif self.menuHandler.currMenu == Menu.MENUS.MAIN:
+      if option == 1:
+        self.menuHandler.currMenu = Menu.MENUS.FRIEND
+      elif option == 2:
+        pass
+      elif option == 3:
+        pass
+      elif option == 0:
+        self.menuHandler.currMenu = Menu.MENUS.INITIAL
+    elif self.menuHandler.currMenu == Menu.MENUS.FRIEND:
+      if option == 1:
+        self.addFriend()
+      elif option == 2:
+        pass 
+      elif option == 3:
+        pass 
+      elif option == 4:
+        pass 
+      elif option == 0:
+        self.menuHandler.currMenu = Menu.MENUS.MAIN
       
   def chapRegister(self):
     username = input("Username: (0 to exit) ")
@@ -113,7 +137,15 @@ class ChatClient:
     optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
-      return
     elif optionArgs["code"] == 0:
       print(optionArgs["args"])
+      self.menuHandler.currMenu = Menu.MENUS.MAIN
+      self.username = username
+  
+  def addFriend(self):
+    friend = input("Friend Username: (0 to exit) ")
+    if friend == "0":
       return
+    self.socket.send(pickle.dumps(OptionArgs(4,(self.username,friend))))
+    optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
+    print(optionArgs["args"])

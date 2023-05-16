@@ -1,7 +1,42 @@
+from enum import Enum
+
 class Menu():
+  """Implements the menus."""
+  
+  """
+  Attributes
+  ----------
+  MENUS : Enum
+    The three possible menus to have
+  INITIAL_MENU_OPTIONS : list
+    Possible options for the initial menu
+      1 for registry
+      2 for login
+      0 for exit
+  MAIN_MENU_OPTIONS    : list
+    Possible options for the main menu
+      1 for opening the friends' menu
+      2 for messaging a friend
+      3 for checking messages
+      0 for returning to initial menu
+  FRIEND_MENU_OPTIONS  : list
+    Possible options for the friends' menu
+      1 for adding a friend
+      2 for checking friends requests
+      3 for removing a friend
+      4 for checking friends list
+      0 for returning to main menu
+  """
+  # == Attributes ==
+  MENUS = Enum('MENUS','INITIAL MAIN FRIEND')
   INITIAL_MENU_OPTIONS = [0,1,2]
   MAIN_MENU_OPTIONS    = [0,1,2,3]
-  FRIEND_MENU_OPTIONS = [0,1,2,3]
+  FRIEND_MENU_OPTIONS  = [0,1,2,3,4]
+  
+  # == Methods ==
+  def __init__(self):
+    """Initialize menus."""
+    self.currMenu = Menu.MENUS.INITIAL
   
   @staticmethod
   def printInitialMenu():
@@ -14,6 +49,13 @@ class Menu():
     
   @staticmethod
   def getInitialMenuOption():
+    """Get user's input in the initial menu.
+
+    Return
+    ----------
+    option : int
+      Option chosen by the user
+    """
     option = -1
     while True:
       try:
@@ -40,6 +82,13 @@ class Menu():
     
   @staticmethod
   def getMainMenuOption():
+    """Get user's input in the main menu.
+
+    Return
+    ----------
+    option : int
+      Option chosen by the user
+    """
     option = -1
     while True:
       try:
@@ -60,12 +109,20 @@ class Menu():
     print("Welcome to your friends page! Which friends are you choosing today?")
     print("1 - Add a friend")
     print("2 - Friend request")
-    print("3 - Remove friend request")
+    print("3 - Remove friend")
+    print("4 - Check friends list")
     print("0 - Exit")
     print("=============================================")
   
   @staticmethod
   def getFriendMenuOption():
+    """Get user's input in the friends menu.
+
+    Return
+    ----------
+    option : int
+      Option chosen by the user
+    """
     option = -1
     while True:
       try:
