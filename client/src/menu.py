@@ -108,7 +108,7 @@ class Menu():
     print("\n=============================================")
     print("Welcome to your friends page! Which friends are you choosing today?")
     print("1 - Add a friend")
-    print("2 - Friend request")
+    print("2 - Friend requests")
     print("3 - Remove friend")
     print("4 - Check friends list")
     print("0 - Exit")

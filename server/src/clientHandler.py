@@ -24,7 +24,9 @@ class ClientHandler:
       1: self.registerChap2,
       2: self.loginChap1,
       3: self.loginChap2,
-      4: self.addFriend
+      4: self.addFriend,
+      5: self.getFriendRequests,
+      6: self.acceptRejectFriends
     }
     self.con = con
     self.cur = cur
@@ -332,3 +334,25 @@ class ClientHandler:
   def areFriends(self,username,friendUsername):
     res = self.cur.execute("SELECT username1,username2 FROM friends WHERE username1 LIKE ? AND username2 LIKE ? AND acceptance = ?;",(username,friendUsername,1))
     return res.fetchall() != []
+  
+  def getFriendRequests(self,args):
+    username = args[0]
+    res = self.cur.execute("SELECT username1 FROM friends WHERE username2 LIKE ? AND acceptance = ?;",(username,0))
+    return res.fetchall()
+  
+  def acceptRejectFriends(self,args):
+    username        = args[0]
+    friendsToAccept  = args[1]
+    friendsToReject = args[2]
+    for friend in friendsToAccept:
+      self.cur.execute("UPDATE friends SET acceptance = ? WHERE username1 LIKE ? AND username2 LIKE ?;",(1,friend,username))
+      self.con.commit()
+    for friend in friendsToReject:
+      self.cur.execute("DELETE FROM friends WHERE username1 LIKE ? AND username2 LIKE ?;",(friend,username))
+      self.con.commit()
+    if len(friendsToAccept) > 0 and len(friendsToReject) == 0:
+      return {'code': 0,'args': "Friend requests accepted."}
+    elif len(friendsToAccept) == 0 and len(friendsToReject) > 0:
+      return {'code': 0,'args': "Friend requests rejected."}
+    else:
+      return {'code': 0,'args': "Friend requests accepted and rejected."}
