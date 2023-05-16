@@ -338,21 +338,28 @@ class ClientHandler:
   def getFriendRequests(self,args):
     username = args[0]
     res = self.cur.execute("SELECT username1 FROM friends WHERE username2 LIKE ? AND acceptance = ?;",(username,0))
-    return res.fetchall()
+    results = res.fetchall()
+    if results == []:
+      return {'code': 1,'args': "You have no friend requests."}
+    else:
+      return {'code': 0,'args': results}
   
   def acceptRejectFriends(self,args):
-    username        = args[0]
-    friendsToAccept  = args[1]
-    friendsToReject = args[2]
-    for friend in friendsToAccept:
-      self.cur.execute("UPDATE friends SET acceptance = ? WHERE username1 LIKE ? AND username2 LIKE ?;",(1,friend,username))
-      self.con.commit()
-    for friend in friendsToReject:
-      self.cur.execute("DELETE FROM friends WHERE username1 LIKE ? AND username2 LIKE ?;",(friend,username))
-      self.con.commit()
-    if len(friendsToAccept) > 0 and len(friendsToReject) == 0:
-      return {'code': 0,'args': "Friend requests accepted."}
-    elif len(friendsToAccept) == 0 and len(friendsToReject) > 0:
-      return {'code': 0,'args': "Friend requests rejected."}
-    else:
-      return {'code': 0,'args': "Friend requests accepted and rejected."}
+    try:
+      username        = args[0]
+      friendsToAccept  = args[1]
+      friendsToReject = args[2]
+      for friend in friendsToAccept:
+        self.cur.execute("UPDATE friends SET acceptance = ? WHERE username1 LIKE ? AND username2 LIKE ?;",(1,friend,username))
+        self.con.commit()
+      for friend in friendsToReject:
+        self.cur.execute("DELETE FROM friends WHERE username1 LIKE ? AND username2 LIKE ?;",(friend,username))
+        self.con.commit()
+      if len(friendsToAccept) > 0 and len(friendsToReject) == 0:
+        return {'code': 0,'args': "Friend requests accepted."}
+      elif len(friendsToAccept) == 0 and len(friendsToReject) > 0:
+        return {'code': 0,'args': "Friend requests rejected."}
+      else:
+        return {'code': 0,'args': "Friend requests accepted and rejected."}
+    except Exception as e:
+      print(e)

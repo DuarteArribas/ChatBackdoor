@@ -155,33 +155,35 @@ class ChatClient:
     optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
+      return
     else:
       print("===== Friend Requests =====")
       for index,friendRequest in enumerate(optionArgs["args"]):
-        print(f"{index+1} -> {friendRequest}")
+        print(f"{index+1} -> {friendRequest[0]}")
       print("===========================")
-      
-      if len(optionArgs["args"]) == 0:
-        print("You have no friend requests")
       friendsToAccept = []
       while True:
-        accept = input("Please insert the friends you want to accept separated by commas (0 to exit): ")
+        accept = input("Please insert the friends you want to accept separated by commas (0 to exit,y to skip): ")
         if accept == "0":
           return
+        if accept == "y":
+            break
         friendsToAccept = accept.split(",")
-        if len([friend for friend in friendsToAccept if friend not in optionArgs["args"]]) > 0:
+        if len([friend for friend in friendsToAccept if int(friend) not in list(range(1,len(optionArgs["args"]) + 1))]) > 0:
           print("Invalid friend request")
           continue
         else:
           break
+      friendsToReject = []
       if len(optionArgs["args"]) - len(friendsToAccept) != 0:
-        friendsToReject = []
         while True:
-          reject = input("Please insert the friends you want to reject separated by commas (0 to exit): ")
+          reject = input("Please insert the friends you want to reject separated by commas (0 to exit,y to skip): ")
           if reject == "0":
             return
+          if reject == "y":
+            break
           friendsToReject = reject.split(",")
-          if len([friend for friend in friendsToReject if friend not in optionArgs["args"]]) > 0:
+          if len([friend for friend in friendsToReject if int(friend) not in list(range(1,len(optionArgs["args"]) + 1))]) > 0:
             print("Invalid friend request")
             continue
           elif len([friend for friend in friendsToReject if friend in friendsToAccept]) > 0:
@@ -189,9 +191,8 @@ class ChatClient:
             continue
           else:
             break
-      friendsToAccept = [optionArgs["args"][friend - 1] for friend in friendsToAccept]
-      friendsToReject = [optionArgs["args"][friend - 1] for friend in friendsToReject]
+      friendsToAccept = [optionArgs["args"][int(friend) - 1][0] for friend in friendsToAccept]
+      friendsToReject = [optionArgs["args"][int(friend) - 1][0] for friend in friendsToReject]
       self.socket.send(pickle.dumps(OptionArgs(6,(self.username,friendsToAccept,friendsToReject))))
       optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
-      print(optionArgs["args"]) 
-        
+      print(optionArgs["args"])
