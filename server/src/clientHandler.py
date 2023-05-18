@@ -537,6 +537,7 @@ class ClientHandler:
     try: 
       username = args[0]
       friendUsername = args[1]
+      print(username,friendUsername)
       self.cur.execute("DELETE FROM friends WHERE username1 LIKE ? AND username2 LIKE ?;",(username,friendUsername))
       self.cur.execute("DELETE FROM friends WHERE username2 LIKE ? AND username1 LIKE ?;",(username,friendUsername))
       self.con.commit()
