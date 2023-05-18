@@ -39,7 +39,7 @@ class ClientHandler:
     self.clientAndUsernames       = clientAndUsernames
     self.keyClientAndUsernames    = keyClientAndUsernames
 
-  def process(self,option,currClient,args = None):
+  def process(self,option,args = None):
     """Process an option received by the client and call the appropriate client handler method.
     
     Parameters
@@ -54,12 +54,12 @@ class ClientHandler:
       The code to be treated by the client and the respective arguments
     """
     if args == None:
-      return self.CLIENT_HANDLER_METHOD[option](currClient)
+      return self.CLIENT_HANDLER_METHOD[option]()
     else:
-      return self.CLIENT_HANDLER_METHOD[option](currClient,args)
+      return self.CLIENT_HANDLER_METHOD[option](args)
   
   # Code 0 == success, 1 == Failure
-  def registerChap1(self,currClient,args):
+  def registerChap1(self,args):
     """Tries to register the client through the creation of keys with elliptic curves for implementation of the CHAP protocol for authentication. Server will verify the authentication of the client. Client will send an authentication request.
     
     Parameters
@@ -126,7 +126,7 @@ class ClientHandler:
     self.cur.execute("INSERT INTO users (username,dA,temp) VALUES (?,?,?);",(username,str(dA),1))
     self.con.commit()
   
-  def registerChap2(self,currClient,args):
+  def registerChap2(self,args):
     """Derive password and save it in the database, registering the user.
     
     Parameters
@@ -225,7 +225,7 @@ class ClientHandler:
     self.cur.execute("UPDATE users SET password = ?, temp = ? WHERE username LIKE ?;",(secret,0,username))
     self.con.commit()
   
-  def loginChap1(self,currClient,args):
+  def loginChap1(self,args):
     """Authenticate client in the login process.
     
     Parameters
@@ -263,7 +263,7 @@ class ClientHandler:
     self.cur.execute("UPDATE users SET chapNonce = ? WHERE username LIKE ?;",(nonce,username))
     self.con.commit()
   
-  def loginChap2(self,currClient,args):
+  def loginChap2(self,args):
     """Authenticate client in the login process.
     
     Parameters
@@ -291,7 +291,7 @@ class ClientHandler:
           if str(client) == mainSocket:
             self.clientAndUsernames.append((client,username))
         for client in self.listOfKeyExchangeClients:
-          if str(client).split("raddr=('127.0.0.1', ")[1].split("),")[0].split(")>")[0] == str(keySocket).split("laddr=('127.0.0.1', ")[1].split("),")[0]:
+          if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(keySocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
             self.keyClientAndUsernames.append((client,username))
         return {'code': 0,'args': "Authentication successful."}
       else:
@@ -331,7 +331,7 @@ class ClientHandler:
     res = self.cur.execute("SELECT chapNonce FROM users WHERE username LIKE ?;",(username,))
     return res.fetchall()[0][0]
   
-  def addFriend(self,currClient,args):
+  def addFriend(self,args):
     """Add friend to the friend's list in the database.
 
     Parameters
@@ -415,7 +415,7 @@ class ClientHandler:
     res = self.cur.execute("SELECT username1,username2 FROM friends WHERE username1 LIKE ? AND username2 LIKE ? AND acceptance = ?;",(username,friendUsername,1))
     return res.fetchall() != []
   
-  def getFriendRequests(self,currClient,args):
+  def getFriendRequests(self,args):
     """Get friend requests from the database.
     
     Parameters
@@ -444,7 +444,7 @@ class ClientHandler:
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
   
-  def acceptRejectFriends(self,currClient,args):
+  def acceptRejectFriends(self,args):
     """Accept or reject friend requests from the list of friend requests.
     
     Parameters
@@ -483,7 +483,7 @@ class ClientHandler:
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
   
-  def showFriendsList(self,currClient,args):
+  def showFriendsList(self,args):
     """Show friends list from the database.
     
     Parameters
@@ -518,7 +518,7 @@ class ClientHandler:
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
 
-  def removeFriend(self,currClient,args):
+  def removeFriend(self,args):
     """ Remove single friend from friend requests through its username.
     
     Parameters
@@ -544,7 +544,7 @@ class ClientHandler:
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred. Friend not removed."}
   
-  def logout(self,currClient,args):
+  def logout(self,args):
     """Logout from the database. When user logs out, their name is removed from a list containing everyone who's online in the moment. 
     
     Parameters

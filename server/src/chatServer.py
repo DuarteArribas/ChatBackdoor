@@ -1,10 +1,10 @@
+import threading
 import socket
 import pickle
 from _thread                import *
 from src.utils.optionArgs   import *
 from src.clientHandler      import *
 from src.keyExchangeHandler import *
-import threading
 
 class ChatServer:
   """
@@ -116,7 +116,7 @@ class ChatServer:
         # Receive client data
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client data
-        response = self.clientHandler.process(opt_args.option,client,opt_args.args)
+        response = self.clientHandler.process(opt_args.option,opt_args.args)
         # Send response to client
         client.send(pickle.dumps(response))
       except Exception: #handle client disconnection gracefully
@@ -134,11 +134,11 @@ class ChatServer:
         # Receive client1 data
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client1 data
-        response = self.keyExchangeHandler.process(opt_args.option,client,opt_args.args)
+        response = self.keyExchangeHandler.process(opt_args.option,opt_args.args)
         # Receive client2 data
         opt_args = pickle.loads(response.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client2 data
-        response = self.keyExchangeHandler.process(opt_args.option,client,opt_args.args)
+        response = self.keyExchangeHandler.process(opt_args.option,opt_args.args)
         # Send response back to client1
         client.send(pickle.dumps(response))
       except Exception: #handle client disconnection gracefully
@@ -156,7 +156,7 @@ class ChatServer:
         # Receive client data
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client data
-        response = self.msgExchangeHandler.process(opt_args.option,client,opt_args.args)
+        response = self.msgExchangeHandler.process(opt_args.option,opt_args.args)
         # Send response to client
         client.send(pickle.dumps(response))
       except Exception: #handle client disconnection gracefully

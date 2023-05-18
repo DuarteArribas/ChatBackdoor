@@ -1,5 +1,5 @@
 import sqlite3
-from configparser import ConfigParser
+from configparser   import ConfigParser
 from src.chatServer import *
 
 def main():

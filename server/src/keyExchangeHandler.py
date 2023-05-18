@@ -21,7 +21,7 @@ class KeyExchangeHandler:
     self.connectedUsernames    = connectedUsernames
     self.keyClientAndUsernames = keyClientAndUsernames
 
-  def process(self,option,currClient,args = None):
+  def process(self,option,args = None):
     """Process an option received by the client and call the appropriate client handler method.
     
     Parameters
@@ -35,14 +35,12 @@ class KeyExchangeHandler:
     dict
       The code to be treated by the client and the respective arguments
     """
-    print("option",option)
-    print("args",args)
     if args == None:
-      return self.CLIENT_HANDLER_METHOD[option](currClient)
+      return self.CLIENT_HANDLER_METHOD[option]()
     else:
-      return self.CLIENT_HANDLER_METHOD[option](currClient,args)
+      return self.CLIENT_HANDLER_METHOD[option](args)
     
-  def exchangeKeys1(self,currClient,args):
+  def exchangeKeys1(self,args):
     try:
       username = args[0]
       friendUsername = args[1]
@@ -55,14 +53,14 @@ class KeyExchangeHandler:
           host.send(pickle.dumps({'code': 2,'args': (username,X,cipherMac)}))
           return host
     except Exception as e:
-      print("2",e)
+      return {'code': 1,'args': "An unknown error occurred."}
   
-  def exchangeKeys2(self,currClient,args):
+  def exchangeKeys2(self,args):
     try:
       username = args[0]
       Y = args[1]
-      for host,u in self.keyClientAndUsernames:
+      for _,u in self.keyClientAndUsernames:
         if u == username:
           return {'code': 0,'args': (Y,)}
     except Exception as e:
-      print("1",e)
+      return {'code': 1,'args': "An unknown error occurred."}
