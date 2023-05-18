@@ -114,7 +114,7 @@ class ChatClient:
             f.write(key)
           self.socket2.send(pickle.dumps(OptionArgs(11,(optionArgs['args'][0],keys[0])))) 
     except Exception as e:
-      print(e) 
+      print(e)
   
   def chapRegister(self):
     username = input("Username: (0 to exit) ")

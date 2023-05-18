@@ -10,7 +10,7 @@ from src.chap             import Chap
 
 class ClientHandler:
   # == Methods ==
-  def __init__(self,con,cur,connectedClients,client,listOfClients,hosts,hosts2,client2,listOfClients2):
+  def __init__(self,con,cur,connectedUsernames,client,listOfClients,hosts,hosts2,client2,listOfClients2):
     """Initalize handler.
     
     Parameters
@@ -36,7 +36,7 @@ class ClientHandler:
     }
     self.con = con
     self.cur = cur
-    self.connectedClients = connectedClients
+    self.connectedUsernames = connectedUsernames
     self.client = client
     self.listOfClients = listOfClients
     self.hosts = hosts
@@ -44,7 +44,7 @@ class ClientHandler:
     self.client2 = client2
     self.listOfClients2 = listOfClients2
 
-  def process(self,option,args = None):
+  def process(self,option,currClient,args = None):
     """Process an option received by the client and call the appropriate client handler method.
     
     Parameters
@@ -286,7 +286,7 @@ class ClientHandler:
       secret    = self.getUserSecret(username)
       nonce     = self.getUserNonce(username)
       if challenge == Chap.getChapChallenge(nonce,secret):
-        self.connectedClients.append(username)
+        self.connectedUsernames.append(username)
         for client in self.listOfClients:
           if client == self.client[0]:
             self.hosts.append((client,username))
@@ -503,7 +503,7 @@ class ClientHandler:
     results = res.fetchall()
     resultsOnline = []
     for result in results:
-      if result[0] in self.connectedClients:
+      if result[0] in self.connectedUsernames:
         resultsOnline.append(result[0] + " (online)")
       else:
         resultsOnline.append(result[0] + " (offline)")
@@ -558,9 +558,9 @@ class ClientHandler:
     """
     try:
       username = args[0]
-      print(self.connectedClients)
-      if username in self.connectedClients:
-        self.connectedClients.remove(username)
+      print(self.connectedUsernames)
+      if username in self.connectedUsernames:
+        self.connectedUsernames.remove(username)
       return {'code': 0,'args': "Logged out."}
     except Exception as e:
       return {'code': 1,'args': e}
@@ -571,7 +571,7 @@ class ClientHandler:
       friendUsername = args[1]
       X = args[2]
       cipherMac = args[3]
-      if friendUsername not in self.connectedClients:
+      if friendUsername not in self.connectedUsernames:
         return {'code': 1,'args': "Friend is not online."}
       for host,u in self.hosts2:
         if u == friendUsername:

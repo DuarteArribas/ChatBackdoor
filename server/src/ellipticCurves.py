@@ -2,8 +2,7 @@ import secrets
 
 class EllipticCurves:
   def __init__(self):
-    """Initialize the Elliptic Curves parameters (P-256). Values taken from https://neuromancer.sk/std/nist/P-256#.
-    """
+    """Initialize the Elliptic Curves parameters (P-256). Values taken from https://neuromancer.sk/std/nist/P-256#."""
     self.a = 0xffffffff00000001000000000000000000000000fffffffffffffffffffffffc
     self.b = 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b
     self.p = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff
