@@ -11,8 +11,8 @@ def main():
     menuHandler = Menu()
     client = ChatClient(
       cfg.get("APP","IP"),
-      cfg.get("APP","PORT"),
-      cfg.get("APP","PORT2"),
+      cfg.get("APP","MAIN_SOCKET_PORT"),
+      cfg.get("APP","KEY_SOCKET_PORT"),
       menuHandler
     )
     option = -1

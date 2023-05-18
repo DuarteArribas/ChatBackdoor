@@ -1,8 +1,9 @@
 import socket
 import pickle
-from _thread              import *
-from src.utils.optionArgs import *
-from src.clientHandler    import *
+from _thread                import *
+from src.utils.optionArgs   import *
+from src.clientHandler      import *
+from src.keyExchangeHandler import *
 import threading
 
 class ChatServer:
@@ -42,14 +43,24 @@ class ChatServer:
     self.listOfClients            = []
     self.listOfKeyExchangeClients = []
     self.listOfMsgExchangeClients = []
-    
-    
-    
-    
-    self.connectedUsernames         = []
-    self.hosts                    = []
-    self.hosts2                   = []
-    self.clientHandler            = ClientHandler(self.con,self.cur,self.connectedUsernames,self.client,self.listOfClients,self.hosts,self.hosts2,self.client2,self.listOfKeyExchangeClients)
+    self.connectedUsernames       = []
+    self.clientAndUsernames       = []
+    self.keyClientAndUsernames    = []
+    self.clientHandler            = ClientHandler(
+      self.con,
+      self.cur,
+      self.connectedUsernames,
+      self.listOfClients,
+      self.listOfKeyExchangeClients,
+      self.clientAndUsernames,
+      self.keyClientAndUsernames
+    )
+    self.keyExchangeHandler       = KeyExchangeHandler(
+      self.con,
+      self.cur,
+      self.connectedUsernames,
+      self.keyClientAndUsernames
+    )
 
   def runServer(self):
     """Run the server."""
@@ -118,16 +129,16 @@ class ChatServer:
     client : socketObject
       The client to handle
     """
-    while True: 
+    while True:
       try:
         # Receive client1 data
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client1 data
-        response = self.keyExchangeHandler.process(opt_args.option,opt_args.args)
+        response = self.keyExchangeHandler.process(opt_args.option,client,opt_args.args)
         # Receive client2 data
         opt_args = pickle.loads(response.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client2 data
-        response = self.keyExchangeHandler.process(opt_args.option,opt_args.args)
+        response = self.keyExchangeHandler.process(opt_args.option,client,opt_args.args)
         # Send response back to client1
         client.send(pickle.dumps(response))
       except Exception: #handle client disconnection gracefully

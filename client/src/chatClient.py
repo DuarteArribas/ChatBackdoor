@@ -50,14 +50,14 @@ class ChatClient:
       The list of command-line arguments. arguments[1:] is the args
     """
     with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
-      self.socket = s
       s.connect((self.ip,self.port))
+      self.socket = s
       self._handleClientActions(option)
   
   def runKeyClient(self):
     with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s2:
-      self.socket2 = s2
       s2.connect((self.ip,self.port2))
+      self.socket2 = s2
       self._handleClientKeyExchange()
 
   def _handleClientActions(self,option):
@@ -108,11 +108,11 @@ class ChatClient:
           keys = ec.generateKeys()
           keyPoint = ec.multiplyPointByScalar(optionArgs['args'][1],keys[1])
           key = str(keyPoint[0])
-          if not os.path.exists(f"server/out/{self.username}Keys/{optionArgs['args'][0]}-{self.username}"):
-            os.makedirs(f"server/out/{self.username}Keys/{optionArgs['args'][0]}-{self.username}")
-          with open(f"server/out/{self.username}Keys/{optionArgs['args'][0]}-{self.username}/{optionArgs['args'][2]}","w") as f:
+          if not os.path.exists(f"client/out/{self.username}Keys/{optionArgs['args'][0]}-{self.username}"):
+            os.makedirs(f"client/out/{self.username}Keys/{optionArgs['args'][0]}-{self.username}")
+          with open(f"client/out/{self.username}Keys/{optionArgs['args'][0]}-{self.username}/{optionArgs['args'][2]}","w") as f:
             f.write(key)
-          self.socket2.send(pickle.dumps(OptionArgs(11,(optionArgs['args'][0],keys[0])))) 
+          self.socket2.send(pickle.dumps(OptionArgs(1,(optionArgs['args'][0],keys[0])))) 
     except Exception as e:
       print(e)
   
@@ -164,7 +164,9 @@ class ChatClient:
     if password == "0":
       return
     challenge = Chap.getChapChallenge(nonce,password)
-    self.socket.send(pickle.dumps(OptionArgs(3,(username,challenge))))
+    #print(self.socket)
+    print(self.socket2)
+    self.socket.send(pickle.dumps(OptionArgs(3,(username,challenge,str(self.socket),str(self.socket2)))))
     optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
@@ -301,21 +303,23 @@ class ChatClient:
     X,dA = ec.generateKeys()
     print("LOOOOAOAOAOA")
     friendToSend = optionArgs["args"][int(friendToSend) - 1].split(" ")[0].split(" ")[0]
-    self.socket2.send(pickle.dumps(OptionArgs(10,(self.username,friendToSend,X,"cipher"))))
+    self.socket2.send(pickle.dumps(OptionArgs(0,(self.username,friendToSend,X,"cipher"))))
     print("LULA")
     optionArgs = pickle.loads(self.socket2.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
     print("aopapaoa")
+    print("CCUCUCUCCUUCUCUCUCUCU")
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
       return
     Y = optionArgs["args"][0]
     keyPoint = ec.multiplyPointByScalar(Y,dA)
     key = str(keyPoint[0])
-    if not os.path.exists(f"server/out/{self.username}Keys/{self.username}-{friendToSend}"):
-      os.makedirs(f"server/out/{self.username}Keys/{self.username}-{friendToSend}")
-    with open(f"server/out/{self.username}Keys/{self.username}-{friendToSend}/cipher","w") as f:
+    if not os.path.exists(f"client/out/{self.username}Keys/{self.username}-{friendToSend}"):
+      os.makedirs(f"client/out/{self.username}Keys/{self.username}-{friendToSend}")
+    with open(f"client/out/{self.username}Keys/{self.username}-{friendToSend}/cipher","w") as f:
       f.write(key)
     print("CARAMBA PA")
+    
     
     
       
