@@ -1,0 +1,87 @@
+import pickle
+import os
+from src.ellipticCurves import *
+from src.utils.optionArgs import OptionArgs
+from Crypto.Hash import SHA512
+from Crypto.Hash          import SHA512
+from Crypto.Cipher        import AES
+from Crypto.Util.Padding  import pad
+from Crypto.PublicKey     import RSA
+from Crypto.PublicKey     import ElGamal
+from Crypto.Hash          import HMAC, SHA512
+from Crypto.Signature     import pkcs1_15
+from Crypto.Util.Padding import unpad
+
+class MsgOptionHandler:
+  """
+  Attributes
+  ----------
+  NUMBER_BYTES_TO_RECEIVE : int
+    The max number of bytes to receive
+  """
+  # == Attributes ==
+  NUMBER_BYTES_TO_RECEIVE = 16384
+
+  # == Methods ==
+  def __init__(self,msgSocket,clientKeysPath,username):
+    """Initialize the key option handler.
+    
+    Parameters
+    ----------
+    keySocket : socket
+      The socket with the key thread
+    clientKeysPath : str
+      The path of the client keys
+    username : str
+      The username of the client
+    """
+    self.msgSocket  = msgSocket
+    self.clientKeysPath = clientKeysPath
+    self.username = username
+  
+  def handleClientMsgExchange(self):
+    """Handle the client key exchange."""
+    while True:
+      try:
+        optionArgs = pickle.loads(self.msgSocket[0].recv(MsgOptionHandler.NUMBER_BYTES_TO_RECEIVE))
+        if optionArgs["code"] == 2:
+          username          = optionArgs["args"][0]
+          friendUsername    = optionArgs["args"][1]
+          cipherText        = optionArgs["args"][2]
+          iv                = optionArgs["args"][3]
+          hmac              = optionArgs["args"][4]
+          rsaSig            = optionArgs["args"][5]
+          elgamalSig        = optionArgs["args"][6]
+          clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{username}-{self.username[0]}")
+          with open(os.path.join(clientKeysPath,"AESCipherKeys"),"r") as f:
+            cipherKey = f.read()
+            with open(os.path.join(clientKeysPath,"AESHmacKeys"),"r") as f2:
+              hmacKey = f2.read()
+              with open(os.path.join(clientKeysPath,"RSASignatureKeys"),"r") as f3:
+                rsaSignatureKey = f3.read()
+                message = self.decipherMsg(cipherText,cipherKey,iv)
+                if hmac == self.calculateMsgHmac(cipherText,hmacKey):
+                  print(f"\t\t{self.username[0]}: {message}")
+                else:
+                  print(f"\t\t{self.username[0]}: {message} (HMAC verification failed)")
+      except Exception as e:
+        print(e)
+  
+  def decipherMsg(self,cipherText,cipherKey,iv):
+    cipher = AES.new(cipherKey.encode("utf-8"),AES.MODE_CBC,iv.encode("utf-8"))
+    return unpad(cipher.decrypt(cipherText),AES.block_size).decode("utf-8")
+  
+  def cipherMsg(self,msg,cipherKey,iv):
+    cipher = AES.new(pad(cipherKey,AES.block_size),AES.MODE_CBC,iv)
+    cipherTextBytes = cipher.encrypt(pad(msg,AES.block_size))
+    return cipherTextBytes.decode('utf-8')
+
+  def calculateMsgHmac(self,msg,hmacKey):
+    h = HMAC.new(hmacKey,digestmod = SHA512)
+    h.update(msg)
+    return h.hexdigest()
+  
+  def calculateRSADigitalSignature(self,msg,rsaPrivateKey):
+    msgHash = SHA512.new(msg)
+    signer = pkcs1_15.new(rsaPrivateKey)
+    return signer.sign(msgHash)

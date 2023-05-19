@@ -28,7 +28,7 @@ class ClientOptionHandler:
   NUMBER_BYTES_TO_RECEIVE = 16384
   
   # == Methods ==
-  def __init__(self,mainSocket,keySocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey):
+  def __init__(self,mainSocket,keySocket,msgSocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey):
     """Initalize handler.
     
     Parameters
@@ -41,6 +41,7 @@ class ClientOptionHandler:
     self.mainSocket = mainSocket
     self.menuHandler    = menuHandler
     self.keySocket  = keySocket
+    self.msgSocket  = msgSocket
     self.username       = username
     self.clientKeysPath = clientKeysPath
     self.rsaKeySizeBits = int(rsaKeySizeBits)
@@ -294,7 +295,7 @@ class ClientOptionHandler:
     while msg != "/0":
       cipherKey,hmacKey,rsaPrivateKey,elgamalPrivateKey = self.getKeys(friendToChat)
       cipherText,iv,hmac,rsaSig,elgamalSig = self.processMsg(msg,cipherKey,hmacKey,rsaPrivateKey,elgamalPrivateKey)
-      self.mainSocket[0].send(pickle.dumps(OptionArgs(11,(self.username[0],friendToChat,cipherText,iv,hmac,rsaSig,elgamalSig))))
+      self.msgSocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,cipherText,iv,hmac,rsaSig,elgamalSig))))
       self.printUserInput(msg)
       msg = input("> ")
   
@@ -376,7 +377,7 @@ class ClientOptionHandler:
   def cipherMsg(self,msg,cipherKey,iv):
     cipher = AES.new(pad(cipherKey,AES.block_size),AES.MODE_CBC,iv)
     cipherTextBytes = cipher.encrypt(pad(msg,AES.block_size))
-    return b64encode(cipherTextBytes).decode('utf-8')
+    return cipherTextBytes.decode('utf-8')
 
   def calculateMsgHmac(self,msg,hmacKey):
     h = HMAC.new(hmacKey,digestmod = SHA512)

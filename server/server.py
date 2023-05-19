@@ -20,7 +20,8 @@ def main():
     cfg.get("APP","MSG_SOCKET_PORT"),
     cfg.get("APP","MAX_CLIENTS"),
     con,
-    cur
+    cur,
+    cfg.get("APP","IV_KEY")
   )
   server.runServer()
   

@@ -9,7 +9,7 @@ from src.chap             import Chap
 
 class ClientHandler:
   # == Methods ==
-  def __init__(self,con,cur,connectedUsernames,listOfClients,listOfKeyExchangeClients,clientAndUsernames,keyClientAndUsernames):
+  def __init__(self,con,cur,connectedUsernames,listOfClients,listOfKeyExchangeClients,listOfMsgExchangeClients,clientAndUsernames,keyClientAndUsernames,msgClientAndUsernames,ivKey):
     """Initalize handler.
     
     Parameters
@@ -40,15 +40,20 @@ class ClientHandler:
       7: self.showFriendsList,
       8: self.removeFriend,
       9: self.logout,
-      10: self.showFriendsListOnline
+      10: self.showFriendsListOnline,
+      11: self.handleNewMessage
     }
     self.con                      = con
     self.cur                      = cur
     self.connectedUsernames       = connectedUsernames
     self.listOfClients            = listOfClients
     self.listOfKeyExchangeClients = listOfKeyExchangeClients
+    self.listOfMsgExchangeClients = listOfMsgExchangeClients
     self.clientAndUsernames       = clientAndUsernames
     self.keyClientAndUsernames    = keyClientAndUsernames
+    self.msgClientAndUsernames    = msgClientAndUsernames
+    self.ivKey                    = ivKey
+    self.iv = b'J\xc7\xdc\xd33#D\xf8\xcf\x86o\x97\x81\xe0f\xcb'
 
   def process(self,option,args = None):
     """Process an option received by the client and call the appropriate client handler method.
@@ -295,6 +300,7 @@ class ClientHandler:
       challenge  = args[1]
       mainSocket = args[2]
       keySocket  = args[3]
+      msgSocket  = args[4]
       secret     = self.getUserSecret(username)
       nonce      = self.getUserNonce(username)
       if challenge == Chap.getChapChallenge(nonce,secret):
@@ -305,6 +311,9 @@ class ClientHandler:
         for client in self.listOfKeyExchangeClients:
           if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(keySocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
             self.keyClientAndUsernames.append((client,username))
+        for client in self.listOfMsgExchangeClients:
+          if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(msgSocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
+            self.msgClientAndUsernames.append((client,username))
         return {'code': 0,'args': "Authentication successful."}
       else:
         return {'code': 1,'args': "Authentication failed."}

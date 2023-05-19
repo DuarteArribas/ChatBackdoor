@@ -17,7 +17,7 @@ class ChatServer:
   NUMBER_BYTES_TO_RECEIVE = 16384
   
   # == Methods ==
-  def __init__(self,ip,mainSocketPort,keySocketPort,msgSocketPort,maxClients,con,cur):
+  def __init__(self,ip,mainSocketPort,keySocketPort,msgSocketPort,maxClients,con,cur,ivKey):
     """Server initialization.
     
     Parameters
@@ -44,20 +44,25 @@ class ChatServer:
     self.maxClients               = int(maxClients)
     self.con                      = con
     self.cur                      = cur
+    self.ivKey                    = ivKey
     self.listOfClients            = []
     self.listOfKeyExchangeClients = []
     self.listOfMsgExchangeClients = []
     self.connectedUsernames       = []
     self.clientAndUsernames       = []
     self.keyClientAndUsernames    = []
+    self.msgClientAndUsernames    = []
     self.clientHandler            = ClientHandler(
       self.con,
       self.cur,
       self.connectedUsernames,
       self.listOfClients,
       self.listOfKeyExchangeClients,
+      self.listOfMsgExchangeClients,
       self.clientAndUsernames,
-      self.keyClientAndUsernames
+      self.keyClientAndUsernames,
+      self.msgClientAndUsernames,
+      self.ivKey
     )
     self.keyExchangeHandler       = KeyExchangeHandler(
       self.con,

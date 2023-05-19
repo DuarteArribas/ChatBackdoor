@@ -5,6 +5,7 @@ from src.utils.optionArgs import *
 from src.ellipticCurves   import *
 from src.clientOptionHandler import *
 from src.keyOptionHandler   import *
+from src.msgOptionHandler   import *
 from src.menu             import Menu
 import os
 import os.path
@@ -34,23 +35,25 @@ class ChatClient:
     self.msgSocketPort       = int(msgSocketPort)
     self.mainSocket = []
     self.keySocket = []
+    self.msgSocket  = []
     self.menuHandler         = menuHandler
     self.username            = [None]
     self.clientKeysPath      = clientKeysPath
     self.rsaKeySizeBits      = rsaKeySizeBits
     self.elGamalKeySizeBits  = elGamalKeySizeBits
     self.ivKey               = ivKey
-    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.menuHandler,self.username,self.clientKeysPath,self.rsaKeySizeBits,self.elGamalKeySizeBits,self.ivKey)
+    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.msgSocket,self.menuHandler,self.username,self.clientKeysPath,self.rsaKeySizeBits,self.elGamalKeySizeBits,self.ivKey)
     self.keyOptionHandler = KeyOptionHandler(self.keySocket,self.clientKeysPath,self.username)
+    self.msgOptionHandler = MsgOptionHandler(self.msgSocket,self.clientKeysPath,self.username)
   
   def runClient(self):
     """Run the client, initializing its threads."""
     thread1 = threading.Thread(target = self.runMainThread)
     thread2 = threading.Thread(target = self.runKeyThread)
-    #thread3 = threading.Thread(target = self.runMsgThread)
+    thread3 = threading.Thread(target = self.runMsgThread)
     thread1.start()
     thread2.start()
-    #thread3.start()
+    thread3.start()
   
   def runMainThread(self):
     """Run the main thread of the client, which handles the menus."""
@@ -100,12 +103,12 @@ class ChatClient:
         self.keySocket[0] = s2 
       self.keyOptionHandler.handleClientKeyExchange()
 
-  #def runMsgThread(self):
-  #  with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s3:
-  #    s3.connect((self.ip,self.msgSocketPort))
-  #    self.socket3 = s3
-  #    #self._handleMsgExchange()
-
-  #def _handleMsgExchange(self):
-  #  pass
-  #
+  def runMsgThread(self):
+    """Run the key thread of the client, which handles the key exchange."""
+    with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s3:
+      s3.connect((self.ip,self.msgSocketPort))
+      if self.msgSocket == []:
+        self.msgSocket.append(s3)
+      else:
+        self.msgSocket[0] = s3 
+      self.self.msgOptionHandler.handleClientMsgExchange()

@@ -16,7 +16,7 @@ class KeyExchangeHandler:
     keyClientAndUsernames : list
       The list of clients for key exchange and respective usernames
     """
-    self.CLIENT_HANDLER_METHOD = {
+    self.KEY_HANDLER_METHOD = {
       0: self.exchangeKeys1,
       1: self.exchangeKeys2,
       2: self.exchangeRSAKeys,
@@ -43,9 +43,9 @@ class KeyExchangeHandler:
       The code to be treated by the client and the respective arguments
     """
     if args == None:
-      return self.CLIENT_HANDLER_METHOD[option]()
+      return self.KEY_HANDLER_METHOD[option]()
     else:
-      return self.CLIENT_HANDLER_METHOD[option](args)
+      return self.KEY_HANDLER_METHOD[option](args)
     
   def exchangeKeys1(self,args):
     """Exchange keys between two clients.
