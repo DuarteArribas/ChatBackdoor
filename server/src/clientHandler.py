@@ -29,7 +29,8 @@ class ClientHandler:
       6: self.acceptRejectFriends,
       7: self.showFriendsList,
       8: self.removeFriend,
-      9: self.logout
+      9: self.logout,
+      10: self.showFriendsListOnline
     }
     self.con                      = con
     self.cur                      = cur
@@ -297,7 +298,7 @@ class ClientHandler:
       else:
         return {'code': 1,'args': "Authentication failed."}
     except Exception as e:
-      return {'code': 1,'args': "An unknown error occurred."}
+      print(e)
 
   def getUserSecret(self, username):
     """Returns user Secret
@@ -517,6 +518,39 @@ class ClientHandler:
         return {'code': 0,'args': resultsOnline}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
+  
+  def showFriendsListOnline(self,args):
+    """Show friends list from the database.
+    
+    Parameters
+    ----------
+    args : tuple
+      args[0] = username from the current user
+    
+    Return
+    ----------
+    dict
+      code : int
+        0 if successful
+        1 if unsuccessful
+      args : str
+        list of friends if successful
+        sad message if unsuccessful
+    """
+    try:
+      username = args[0]
+      res = self.cur.execute("SELECT username1 FROM friends WHERE username2 LIKE ? AND acceptance = ? UNION SELECT username2 FROM friends WHERE username1 LIKE ? AND acceptance = ?;",(username,1,username,1))
+      results = res.fetchall()
+      resultsOnline = []
+      for result in results:
+        if result[0] in self.connectedUsernames:
+          resultsOnline.append(result[0] + " (online)")
+      if resultsOnline == []:
+        return {'code': 1,'args': "Sorry, you've got no friends online 🥲"}
+      else:
+        return {'code': 0,'args': resultsOnline}
+    except Exception as e:
+      return {'code': 1,'args': "An unknown error occurred."}
 
   def removeFriend(self,args):
     """ Remove single friend from friend requests through its username.
@@ -537,7 +571,6 @@ class ClientHandler:
     try: 
       username = args[0]
       friendUsername = args[1]
-      print(username,friendUsername)
       self.cur.execute("DELETE FROM friends WHERE username1 LIKE ? AND username2 LIKE ?;",(username,friendUsername))
       self.cur.execute("DELETE FROM friends WHERE username2 LIKE ? AND username1 LIKE ?;",(username,friendUsername))
       self.con.commit()

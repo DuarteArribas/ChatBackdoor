@@ -28,9 +28,9 @@ class Menu():
       0 for returning to main menu
   """
   # == Attributes ==
-  MENUS = Enum('MENUS','INITIAL MAIN FRIEND')
+  MENUS = Enum('MENUS','INITIAL MAIN FRIEND CHAT')
   INITIAL_MENU_OPTIONS = [0,1,2]
-  MAIN_MENU_OPTIONS    = [0,1,2,3]
+  MAIN_MENU_OPTIONS    = [0,1,2]
   FRIEND_MENU_OPTIONS  = [0,1,2,3,4]
   
   # == Methods ==
@@ -75,8 +75,7 @@ class Menu():
     print("\n=============================================")
     print("Welcome to your main page! Select an option!")
     print("1 - Friend list")
-    print("2 - Message a friend")
-    print("3 - Check messages")
+    print("2 - Chat with a friend")
     print("0 - Logout")
     print("=============================================")
     
@@ -135,6 +134,4 @@ class Menu():
         break
       print(f"Please enter a valid option ({Menu.FRIEND_MENU_OPTIONS[0]}-{Menu.FRIEND_MENU_OPTIONS[-1]})!")
       Menu.printFriendMenu()
-    return option
-  
-  
+    return option 

@@ -33,10 +33,10 @@ class ChatClient:
     self.mainSocket = []
     self.keySocket = []
     self.menuHandler         = menuHandler
-    self.username            = None
+    self.username            = [None]
     self.clientKeysPath      = clientKeysPath
-    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.menuHandler,self.username)
-    self.keyOptionHandler = KeyOptionHandler(self.keySocket,self.clientKeysPath)
+    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.menuHandler,self.username,self.clientKeysPath)
+    self.keyOptionHandler = KeyOptionHandler(self.keySocket,self.clientKeysPath,self.username)
   
   def runClient(self):
     thread1 = threading.Thread(target = self.runMainThread)
@@ -71,6 +71,9 @@ class ChatClient:
         option = Menu.getFriendMenuOption()
         self.handleAction(option)
         option = -1 if option == 0 else option
+      elif self.menuHandler.currMenu == Menu.MENUS.CHAT:
+        self.handleAction(None)
+        option = -1 if option == 0 else option
     
   def handleAction(self,option):
     with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
@@ -99,58 +102,3 @@ class ChatClient:
   #def _handleMsgExchange(self):
   #  pass
   #
-  #def sendMessage(self):
-  #  self.socket.send(pickle.dumps(OptionArgs(7,(self.username,))))
-  #  optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
-  #  if optionArgs["code"] == 1:
-  #    print(optionArgs["args"])
-  #    return
-  #  else:
-  #    print("===== Friends List =====")
-  #    for index,friend in enumerate(optionArgs["args"]):
-  #      if friend.split(" ")[1] == "(online)":
-  #        print(f"{index+1}: {friend}")
-  #    print("========================")
-  #  while True:
-  #    friendToSend = input("Please insert the friend you wish to send the message to (0 to exit): ")
-  #    if friendToSend == "0":
-  #      return
-  #    if int(friendToSend) not in list(range(1,len(optionArgs["args"]) + 1)):
-  #      print("Invalid friend")
-  #      continue
-  #    else:
-  #      break
-  #  ec   = EllipticCurves()
-  #  X,dA = ec.generateKeys()
-  #  print("LOOOOAOAOAOA")
-  #  friendToSend = optionArgs["args"][int(friendToSend) - 1].split(" ")[0].split(" ")[0]
-  #  self.socket2.send(pickle.dumps(OptionArgs(0,(self.username,friendToSend,X,"cipher"))))
-  #  print("LULA")
-  #  optionArgs = pickle.loads(self.socket2.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
-  #  print("aopapaoa")
-  #  print("CCUCUCUCCUUCUCUCUCUCU")
-  #  if optionArgs["code"] == 1:
-  #    print(optionArgs["args"])
-  #    return
-  #  Y = optionArgs["args"][0]
-  #  keyPoint = ec.multiplyPointByScalar(Y,dA)
-  #  key = str(keyPoint[0])
-  #  if not os.path.exists(f"client/out/{self.username}Keys/{self.username}-{friendToSend}"):
-  #    os.makedirs(f"client/out/{self.username}Keys/{self.username}-{friendToSend}")
-  #  with open(f"client/out/{self.username}Keys/{self.username}-{friendToSend}/cipher","w") as f:
-  #    f.write(key)
-  #  print("CARAMBA PA")
-  #  
-    
-    
-      
-      
-      
-      
-    #
-    #message = input("Please insert the message you wish to send: ")
-    #
-    #
-    #self.socket.send(pickle.dumps(OptionArgs(10,(self.username,optionArgs["args"][int(friendToSend) - 1][0],message))))
-    #optionArgs = pickle.loads(self.socket.recv(ChatClient.NUMBER_BYTES_TO_RECEIVE))
-    #print(optionArgs["args"])
