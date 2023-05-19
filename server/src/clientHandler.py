@@ -14,10 +14,20 @@ class ClientHandler:
     
     Parameters
     ----------
-    con : sqlite3.Connection
+    con                      : sqlite3.Connection
       The connection to the local database
-    cur : sqlite3.Cursor
+    cur                      : sqlite3.Cursor
       The cursor to the local database
+    connectedUsernames       : list
+      The list of usernames of connected clients
+    listOfClients            : list
+      The list of clients
+    listOfKeyExchangeClients : list
+      The list of clients for key exchange
+    clientAndUsernames       : list
+      The list of clients and respective usernames
+    keyClientAndUsernames    : list
+      The list of clients for key exchange and respective usernames
     """
     self.CLIENT_HANDLER_METHOD = {
       0: self.registerChap1,
@@ -49,6 +59,7 @@ class ClientHandler:
       The chosen menu option
     args   : tuple
       The arguments sent by the client
+
     Return
     ----------
     dict

@@ -14,6 +14,12 @@ import os
 import os.path
 
 class ClientOptionHandler:
+  """
+  Attributes
+  ----------
+  NUMBER_BYTES_TO_RECEIVE : int
+    The max number of bytes to receive
+  """
   # == Attributes ==
   NUMBER_BYTES_TO_RECEIVE = 16384
   
@@ -74,6 +80,7 @@ class ClientOptionHandler:
         self.chat(friendToChat)
           
   def chapRegister(self):
+    """Registers user using the Challenge Handshake Authentication Protocol (CHAP)."""
     username = input("Username: (0 to exit) ")
     if username == "0":
       return
@@ -104,6 +111,7 @@ class ClientOptionHandler:
     print(optionArgs["args"])
   
   def chapLogin(self):
+    """Logs user in using the Challenge Handshake Authentication Protocol (CHAP)."""
     username = input("Username: (0 to exit) ")
     if username == "0":
       return
@@ -131,6 +139,7 @@ class ClientOptionHandler:
       self.username[0] = username
   
   def addFriend(self):
+    """Adds a friend."""
     friend = input("Friend Username: (0 to exit) ")
     if friend == "0":
       return
@@ -139,6 +148,7 @@ class ClientOptionHandler:
     print(optionArgs["args"])
   
   def friendRequests(self):
+    """Shows friend requests and allows their acceptance and/or removal."""
     self.mainSocket[0].send(pickle.dumps(OptionArgs(5,(self.username[0],))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
@@ -186,6 +196,7 @@ class ClientOptionHandler:
       print(optionArgs["args"])
   
   def showFriendsList(self):
+    """Shows friends list."""
     self.mainSocket[0].send(pickle.dumps(OptionArgs(7,(self.username[0],))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
@@ -198,6 +209,7 @@ class ClientOptionHandler:
       print("========================")
   
   def removeFriend(self):
+    """Removes a user from the list of friends."""
     self.mainSocket[0].send(pickle.dumps(OptionArgs(7,(self.username[0],))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
@@ -232,6 +244,7 @@ class ClientOptionHandler:
       print(optionArgs["args"])
       
   def getFriend(self):
+    """Gets the username of another user to chat with."""
     self.mainSocket[0].send(pickle.dumps(OptionArgs(10,(self.username[0],))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
@@ -254,9 +267,25 @@ class ClientOptionHandler:
         return optionArgs["args"][int(friend) - 1].split(" ")[0].split(" ")[0]
   
   def chat(self,friendToChat):
+    """Chat with another user, exchanging keys.
+    
+    Parameters
+    ----------
+    friendToChat : str
+      The username of the friend to chat with
+    """
     self.exchangeKeys(friendToChat,"Cipher")
   
   def exchangeKeys(self,friendToChat,keyType):
+    """Exchange keys with a friend user using Diffie-Hellman on elliptic curves protocol.
+    
+    Parameters
+    ----------
+    friendToChat : str
+      The username of the friend to chat with
+    keyType : str
+      The type of key to exchange
+    """
     ec   = EllipticCurves()
     X,dA = ec.generateKeys()
     self.keySocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,X,keyType))))

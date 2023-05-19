@@ -1,7 +1,7 @@
 import hashlib
 
 class Chap:
-  """Implements the CHAP authentication protocol."""
+  """Implements the Challenge Handshake Authentication Protocol (CHAP)."""
   @staticmethod
   def getChapChallenge(nonce,secret):
     """Get the CHAP challenge.

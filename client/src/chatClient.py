@@ -10,21 +10,23 @@ import os
 import os.path
 
 class ChatClient:
-  """
-  Attributes
-  ----------
-  NUMBER_BYTES_TO_RECEIVE : int
-    The max number of bytes to receive
-  """
   # == Methods ==
   def __init__(self,ip,mainSocketPort,keySocketPort,msgSocketPort,menuHandler,clientKeysPath):
     """Initialize a socket connection with the server.
     Parameters
     ----------
-    ip   : str
+    ip             : str
       The ip of the server
-    port : int
-      The port of the server
+    mainSocketPort : int
+      The port of the socket with the main thread
+    keySocketPor   : int
+      The port of the socket with the key thread
+    msgSocketPor   : int
+      The port of the socket with the message thread
+    menuHandler    : MenuHandler
+      The menu handler of the client
+    clientKeysPath : str
+      The path of the client keys
     """
     self.ip                  = ip
     self.mainSocketPort      = int(mainSocketPort)
@@ -39,6 +41,7 @@ class ChatClient:
     self.keyOptionHandler = KeyOptionHandler(self.keySocket,self.clientKeysPath,self.username)
   
   def runClient(self):
+    """Run the client, initializing its threads."""
     thread1 = threading.Thread(target = self.runMainThread)
     thread2 = threading.Thread(target = self.runKeyThread)
     #thread3 = threading.Thread(target = self.runMsgThread)
@@ -47,14 +50,7 @@ class ChatClient:
     #thread3.start()
   
   def runMainThread(self):
-    """Run the client.
-    
-    Parameters
-    ----------
-    arguments : list
-      The list of command-line arguments. arguments[0] is the option
-      The list of command-line arguments. arguments[1:] is the args
-    """
+    """Run the main thread of the client, which handles the menus."""
     option = -1
     while not (option == 0 and self.menuHandler.currMenu == Menu.MENUS.INITIAL):
       if self.menuHandler.currMenu == Menu.MENUS.INITIAL:
@@ -76,6 +72,13 @@ class ChatClient:
         option = -1 if option == 0 else option
     
   def handleAction(self,option):
+    """Handle the action chosen by the user.
+
+    Parameters
+    ----------
+    option : int
+      The option chosen by the user
+    """
     with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
       s.connect((self.ip,self.mainSocketPort))
       if self.mainSocket == []:
@@ -85,6 +88,7 @@ class ChatClient:
       self.clientOptionHandler.handleClientActions(option)
   
   def runKeyThread(self):
+    """Run the key thread of the client, which handles the key exchange."""
     with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s2:
       s2.connect((self.ip,self.keySocketPort))
       if self.keySocket == []:

@@ -1,6 +1,7 @@
 import secrets
 
 class EllipticCurves:
+  # == Methods ==
   def __init__(self):
     """Initialize the Elliptic Curves parameters (P-256). Values taken from https://neuromancer.sk/std/nist/P-256#.
     """

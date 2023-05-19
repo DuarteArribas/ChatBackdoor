@@ -7,10 +7,14 @@ class KeyExchangeHandler:
     
     Parameters
     ----------
-    con : sqlite3.Connection
+    con                   : sqlite3.Connection
       The connection to the local database
-    cur : sqlite3.Cursor
+    cur                   : sqlite3.Cursor
       The cursor to the local database
+    connectedUsernames    : list
+      The list of usernames of connected clients
+    keyClientAndUsernames : list
+      The list of clients for key exchange and respective usernames
     """
     self.CLIENT_HANDLER_METHOD = {
       0: self.exchangeKeys1,
@@ -41,6 +45,30 @@ class KeyExchangeHandler:
       return self.CLIENT_HANDLER_METHOD[option](args)
     
   def exchangeKeys1(self,args):
+    """Exchange keys between two clients.
+    
+    Parameters
+    ----------
+    args : tuple
+      args[0] : str
+        The username of the client
+      args[1] : str
+        The username of the friend
+      args[2] : int
+        The X point of the client's key
+      args[3] : str
+        The MAC of the client's key
+    
+    Return
+    ----------
+    dict
+      code : int
+        2 if successful
+        1 if unsuccessful
+      args : str
+        exception message if unsuccessful
+        tuple of username, key point and cipher MAC if successful
+    """
     try:
       username = args[0]
       friendUsername = args[1]
@@ -56,6 +84,26 @@ class KeyExchangeHandler:
       return {'code': 1,'args': "An unknown error occurred."}
   
   def exchangeKeys2(self,args):
+    """Exchange keys between two clients.
+    
+    Parameters
+    ----------
+    args : tuple
+      args[0] : str
+        The username of the client
+      args[1] : int
+        The Y point of the client's key
+    
+    Return
+    ----------
+    dict
+      code : int
+        0 if successful
+        1 if unsuccessful
+      args : str
+        exception message if unsuccessful
+        tuple of Y point if successful
+    """
     try:
       username = args[0]
       Y = args[1]

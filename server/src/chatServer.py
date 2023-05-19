@@ -22,15 +22,19 @@ class ChatServer:
     
     Parameters
     ----------
-    ip         : int
+    ip             : int
       The ip of the server
-    port       : int
-      The port to open the server on
-    maxClients : int
+    mainSocketPort : int
+      The port of the socket with the main thread
+    keySocketPort  : int
+      The port of the socket with the key thread
+    msgSocketPort  : int
+      The port of the socket with the message thread
+    maxClients     : int
       The maximum number of clients to handle
-    con        : sqlite3.Connection
+    con            : sqlite3.Connection
       The connection to the local database
-    cur        : sqlite3.Cursor
+    cur            : sqlite3.Cursor
       The cursor to the local database
     """
     self.ip                       = ip

@@ -4,15 +4,34 @@ from src.ellipticCurves import *
 from src.utils.optionArgs import OptionArgs
 
 class KeyOptionHandler:
+  """
+  Attributes
+  ----------
+  NUMBER_BYTES_TO_RECEIVE : int
+    The max number of bytes to receive
+  """
   # == Attributes ==
   NUMBER_BYTES_TO_RECEIVE = 16384
 
+  # == Methods ==
   def __init__(self,keySocket,clientKeysPath,username):
+    """Initialize the key option handler.
+    
+    Parameters
+    ----------
+    keySocket : socket
+      The socket with the key thread
+    clientKeysPath : str
+      The path of the client keys
+    username : str
+      The username of the client
+    """
     self.keySocket  = keySocket
     self.clientKeysPath = clientKeysPath
     self.username = username
   
   def handleClientKeyExchange(self):
+    """Handle the client key exchange."""
     while True:
       try:
         print("cc")
