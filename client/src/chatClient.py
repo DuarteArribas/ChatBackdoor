@@ -11,7 +11,7 @@ import os.path
 
 class ChatClient:
   # == Methods ==
-  def __init__(self,ip,mainSocketPort,keySocketPort,msgSocketPort,menuHandler,clientKeysPath):
+  def __init__(self,ip,mainSocketPort,keySocketPort,msgSocketPort,menuHandler,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey):
     """Initialize a socket connection with the server.
     Parameters
     ----------
@@ -37,7 +37,10 @@ class ChatClient:
     self.menuHandler         = menuHandler
     self.username            = [None]
     self.clientKeysPath      = clientKeysPath
-    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.menuHandler,self.username,self.clientKeysPath)
+    self.rsaKeySizeBits      = rsaKeySizeBits
+    self.elGamalKeySizeBits  = elGamalKeySizeBits
+    self.ivKey               = ivKey
+    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.menuHandler,self.username,self.clientKeysPath,self.rsaKeySizeBits,self.elGamalKeySizeBits,self.ivKey)
     self.keyOptionHandler = KeyOptionHandler(self.keySocket,self.clientKeysPath,self.username)
   
   def runClient(self):

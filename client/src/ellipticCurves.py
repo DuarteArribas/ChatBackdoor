@@ -120,30 +120,14 @@ class EllipticCurves:
     s = s.lstrip('-0b') # remove leading zeros and minus sign
     return len(s)       # len('100101') --> 6
   
-  def multiplyPointByScalar(self,p,n):
-    """Multiply a point by a scalar value.
-
-    Parameters
-    ----------
-    p : point(x, y)
-      Point to be multiplied
-    n : int
-      Scalar
-      
-    Return
-    ----------
-    result : point (x, y)
-      Multiplied point
-    """
+  def multiplyPointByScalar(self, p, n):
     nbits = self.bit_length(n)
-    result = (p[0],p[1])
-    p1 = (p[0],p[1])
-
-    for i in range(1, nbits):
-      result = self.doublePoint(p)
-      bit = (n >> (nbits-i-1) ) & 1
-      if bit == 1 :
-        result = self.sum(p1,p)
+    result = None
+    for i in range(nbits - 1, -1, -1):
+      result = self.doublePoint(result if result else p)
+      bit = (n >> i) & 1
+      if bit == 1:
+        result = self.sum(result,p)
     return result
   
   def generateKeys(self):

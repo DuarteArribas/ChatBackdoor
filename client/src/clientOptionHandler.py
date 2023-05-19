@@ -5,7 +5,11 @@ from Crypto.Random        import get_random_bytes
 from Crypto.Cipher        import AES
 from base64               import b64encode
 from Crypto.Util.Padding  import pad
+from Crypto.PublicKey     import RSA
+from Crypto.PublicKey     import ElGamal
 from src.chap             import Chap
+from Crypto.Hash          import HMAC, SHA512
+from Crypto.Signature     import pkcs1_15
 from src.menu import Menu
 from src.chap import Chap
 from src.utils.optionArgs import OptionArgs
@@ -24,7 +28,7 @@ class ClientOptionHandler:
   NUMBER_BYTES_TO_RECEIVE = 16384
   
   # == Methods ==
-  def __init__(self,mainSocket,keySocket,menuHandler,username,clientKeysPath):
+  def __init__(self,mainSocket,keySocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey):
     """Initalize handler.
     
     Parameters
@@ -39,6 +43,10 @@ class ClientOptionHandler:
     self.keySocket  = keySocket
     self.username       = username
     self.clientKeysPath = clientKeysPath
+    self.rsaKeySizeBits = int(rsaKeySizeBits)
+    self.elGamalKeySizeBits = int(elGamalKeySizeBits)
+    self.ivKey = ivKey.encode("utf-8")
+    self.iv = b'J\xc7\xdc\xd33#D\xf8\xcf\x86o\x97\x81\xe0f\xcb'
 
   def handleClientActions(self,option):
     """Handle client actions.
@@ -274,7 +282,21 @@ class ClientOptionHandler:
     friendToChat : str
       The username of the friend to chat with
     """
-    self.exchangeKeys(friendToChat,"Cipher")
+    if not self.exchangeKeys(friendToChat,"AESCipherKeys"):
+      return
+    if not self.exchangeHmacKeys(friendToChat,"AESHmacKeys"):
+      return
+    if not self.exchangePublicKeys(friendToChat,"RSASignatureKeys","RSA"):
+      return
+    if not self.exchangePublicKeys(friendToChat,"ElGamalSignatureKeys","ElGamal"):
+      return
+    msg = input("> ")
+    while msg != "/0":
+      cipherKey,hmacKey,rsaPrivateKey,elgamalPrivateKey = self.getKeys(friendToChat)
+      cipherText,iv,hmac,rsaSig,elgamalSig = self.processMsg(msg,cipherKey,hmacKey,rsaPrivateKey,elgamalPrivateKey)
+      self.mainSocket[0].send(pickle.dumps(OptionArgs(11,(self.username[0],friendToChat,cipherText,iv,hmac,rsaSig,elgamalSig))))
+      self.printUserInput(msg)
+      msg = input("> ")
   
   def exchangeKeys(self,friendToChat,keyType):
     """Exchange keys with a friend user using Diffie-Hellman on elliptic curves protocol.
@@ -292,12 +314,89 @@ class ClientOptionHandler:
     optionArgs = pickle.loads(self.keySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
-      return
+      return False
     Y = optionArgs["args"][0]
     keyPoint = ec.multiplyPointByScalar(Y,dA)
     key = str(keyPoint[0])
-    clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys/{self.username[0]}-{friendToChat}")
+    clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}")
     if not os.path.exists(clientKeysPath):
       os.makedirs(clientKeysPath)
     with open(os.path.join(clientKeysPath,keyType),"w") as f:
       f.write(key)
+    return True
+  
+  def exchangePublicKeys(self,friendToChat,keyType,algorithm):
+    """Exchange keys with a friend user using Diffie-Hellman on elliptic curves protocol.
+    
+    Parameters
+    ----------
+    friendToChat : str
+      The username of the friend to chat with
+    keyType : str
+      The type of key to exchange
+    """
+    if algorithm == "RSA":
+      privateAndPublicKeys = RSA.generate(self.rsaKeySizeBits,secrets.token_bytes)
+      clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}")
+      if not os.path.exists(clientKeysPath):
+        os.makedirs(clientKeysPath)
+      with open(os.path.join(clientKeysPath,keyType),"w") as f:
+        f.write(privateAndPublicKeys.export_key().decode("utf-8") )
+      self.keySocket[0].send(pickle.dumps(OptionArgs(2,(self.username[0],friendToChat,privateAndPublicKeys.public_key().export_key(),keyType)))) 
+      optionArgs = pickle.loads(self.keySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
+      if optionArgs["code"] == 1:
+        print(optionArgs["args"])
+        return False
+      return True
+    elif algorithm == "ElGamal":
+      try:
+        privateAndPublicKeys = ElGamal.generate(self.elGamalKeySizeBits,secrets.token_bytes)
+      except Exception as e:
+        print(e)
+      clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}")
+      if not os.path.exists(clientKeysPath):
+        os.makedirs(clientKeysPath)
+      with open(os.path.join(clientKeysPath,keyType),"w") as f:
+        f.write(privateAndPublicKeys.x.to_bytes().decode("latin-1'") )
+      self.keySocket[0].send(pickle.dumps(OptionArgs(3,(self.username[0],friendToChat,(privateAndPublicKeys.y.to_bytes(),privateAndPublicKeys.g.to_bytes(),privateAndPublicKeys.p.to_bytes()),keyType)))) 
+      optionArgs = pickle.loads(self.keySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
+      if optionArgs["code"] == 1:
+        print(optionArgs["args"])
+        return False
+      return True
+  
+  def processMsg(self,msg,cipherKey,hmacKey,rsaPrivateKey,elgamalPrivateKey):
+    cipherKeyAndHmacKey = str(len(cipherKey)) + ":" + cipherKey + hmacKey
+    iv = self.cipherMsg(cipherKeyAndHmacKey,self.ivKey,self.iv)
+    cipherText = self.cipherMsg(msg,cipherKey.encode("utf-8"),iv)
+    hmac = self.calculateMsgHmac(cipherText,hmacKey.encode("utf-8"))
+    rsaSig = self.calculateRSADigitalSignature(cipherText,rsaPrivateKey.encode("utf-8"))
+    return (cipherText,iv,hmac,rsaSig,b"arroz") #TODO: Change this
+  
+  def cipherMsg(self,msg,cipherKey,iv):
+    cipher = AES.new(pad(cipherKey,AES.block_size),AES.MODE_CBC,iv)
+    cipherTextBytes = cipher.encrypt(pad(msg,AES.block_size))
+    return b64encode(cipherTextBytes).decode('utf-8')
+
+  def calculateMsgHmac(self,msg,hmacKey):
+    h = HMAC.new(hmacKey,digestmod = SHA512)
+    h.update(msg)
+    return h.hexdigest()
+  
+  def calculateRSADigitalSignature(self,msg,rsaPrivateKey):
+    msgHash = SHA512.new(msg)
+    signer = pkcs1_15.new(rsaPrivateKey)
+    return signer.sign(msgHash)
+  
+  def getKeys(self,friendToChat):
+    with open(os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}","AESCipherKeys"),"r") as f:
+      cipherKey = f.read()
+      with open(os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}","AESHmacKeys"),"r") as f2:
+        hmacKey = f2.read()
+        with open(os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}","RSASignatureKeys"),"r") as f3:
+          rsaPrivateKey = f3.read()
+          return (cipherKey,hmacKey,RSA.import_key(rsaPrivateKey),b"arroz") #TODO: Change this
+      
+  def printUserInput(self,msg):
+    print("\033[A                             \033[A")
+    print(f"{self.usernameme[0]}> {msg}")
