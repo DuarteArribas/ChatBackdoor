@@ -84,13 +84,19 @@ class MsgExchangeHandler:
       cipherText        = args[2]
       iv                = args[3]
       cipherAndHmacKeys = self.decipherMsg(iv,self.ivKey,self.iv).decode("utf-8")
-      cipherKey         = cipherAndHmacKeys.split(":")[1][:int(cipherAndHmacKeys.split(":")[0])]
-      hmacKey           = cipherAndHmacKeys.split(":")[1][int(cipherAndHmacKeys.split(":")[0]):]
+      cipherKey         = cipherAndHmacKeys.split(":")[2][:int(cipherAndHmacKeys.split(":")[0])]
+      hmacKey           = cipherAndHmacKeys.split(":")[2][int(cipherAndHmacKeys.split(":")[0]):int(cipherAndHmacKeys.split(":")[1])]
+      p                 = cipherAndHmacKeys.split(":")[2][int(cipherAndHmacKeys.split(":")[1]):]
       cipherKey         = cipherKey.encode("utf-8")
       hmacKey           = hmacKey.encode("utf-8")
       hmac              = args[4]
-      rsaSig            = args[5]
-      elgamalSig        = args[6]
+      N                 = args[5]
+      e                 = args[6]
+      q                 = N / p
+      d                 = self.calculateDFromParams(p,q,e)
+      rsaPrivateKey     = RSA.construct((N,e,d,p,q))
+      rsaSig            = args[7]
+      elgamalSig        = args[8]
       message           = self.decipherMsg(cipherText,cipherKey,iv)
       print(f"{username} just sent a message to {friendUsername}: {message.decode('utf-8')}. 15 seconds to change the message contents before being sent.")
       fileHash = SHA512.new((username + friendUsername + message.decode("utf-8") + datetime.now().strftime("%d/%m/%Y %H:%M:%S")).encode("utf-8")).hexdigest()
@@ -107,19 +113,18 @@ class MsgExchangeHandler:
         print("The original message was not changed.")
       cipherText = self.cipherMsg(newMsg.encode("utf-8"),cipherKey,iv)
       hmac = self.calculateMsgHmac(cipherText,hmacKey)
-      #rsaSig = self.calculateRSADigitalSignature(cipherText,rsaPrivateKey)
+      rsaSig = self.calculateRSADigitalSignature(cipherText,rsaPrivateKey)
       self.cur.execute("INSERT INTO messages (username1,username2,message) VALUES (?,?,?);",(username,friendUsername,newMsg))
       self.con.commit()
       for host,u in self.msgClientAndUsernames:
         if u == friendUsername:
-          host.send(pickle.dumps({'code': 2,'args': (username,friendUsername,cipherText,iv,hmac,rsaSig,elgamalSig)}))
+          host.send(pickle.dumps({'code': 2,'args': (username,friendUsername,cipherText,iv,hmac,N,e,rsaSig,elgamalSig)}))
           return host
       return {'code': 0,'args': "Message sent."}
-    except Exception as e:
-      print(e)
+    except Exception as err:
+      print(err)
       return {'code': 1,'args': "An unknown error occurred."}
-  
-  
+    
   def decipherMsg(self,cipherText,cipherKey,iv):
     cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])
     return unpad(cipher.decrypt(cipherText),AES.block_size)
@@ -138,3 +143,17 @@ class MsgExchangeHandler:
     msgHash = SHA512.new(msg)
     signer = pkcs1_15.new(rsaPrivateKey)
     return signer.sign(msgHash)
+
+  def calculateDFromParams(self,p,q,e):
+    phi_N = (p - 1) * (q - 1)
+    def extendedGcd(a, b):
+      if b == 0:
+        return a, 1, 0
+      else:
+        d, x, y = extendedGcd(b, a % b)
+        return d, y, x - (a // b) * y
+    _, d, _ = extendedGcd(e, phi_N)
+    d %= phi_N
+    if d < 0:
+      d += phi_N
+    return d

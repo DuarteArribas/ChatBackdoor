@@ -16,6 +16,8 @@ from src.utils.optionArgs import OptionArgs
 from src.ellipticCurves import *
 import os
 import os.path
+from sympy import isprime
+import random
 
 class ClientOptionHandler:
   """
@@ -293,26 +295,27 @@ class ClientOptionHandler:
       return
     if not self.exchangeKeys(friendToChat,"AESHmacKeys"):
       return
-    if not self.exchangePublicKeys(friendToChat,"RSASignatureKeys","RSA"):
+    if not self.generatePublicKeys(friendToChat,"RSASignatureKeys","RSA"):
       return
-    if not self.exchangePublicKeys(friendToChat,"ElGamalSignatureKeys","ElGamal"):
+    if not self.generatePublicKeys(friendToChat,"ElGamalSignatureKeys","ElGamal"):
       return
-    print("You can now start chatting with your friend.")
+    print(f"You can now start chatting with your friend {friendToChat}.")
     msg = input("> ")
     while msg != "/0":
-      cipherKey,hmacKey,rsaPrivateKey,elgamalPrivateKey = self.getKeys(friendToChat)
+      cipherKey,hmacKey,(p,q,e,d,N),elgamalPrivateKey = self.getKeys(friendToChat)
       cipherKey     = cipherKey.encode("utf-8")
       hmacKey       = hmacKey.encode("utf-8")
-      rsaPrivateKey = RSA.import_key(rsaPrivateKey)
+      rsaPrivateKey = RSA.construct((N,e,d,p,q))
       msgBytes      = msg.encode("utf-8")
       cipherText,iv,hmac,rsaSig,elgamalSig = self.processMsg(
         msgBytes,
         cipherKey,
         hmacKey,
         rsaPrivateKey,
-        elgamalPrivateKey
+        elgamalPrivateKey,
+        p
       )
-      self.msgSocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,cipherText,iv,hmac,rsaSig,elgamalSig))))
+      self.msgSocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,cipherText,iv,hmac,N,e,rsaSig,elgamalSig))))
       self.printUserInput(msg)
       msg = input("> ")
   
@@ -343,7 +346,7 @@ class ClientOptionHandler:
       f.write(key)
     return True
   
-  def exchangePublicKeys(self,friendToChat,keyType,algorithm):
+  def generatePublicKeys(self,friendToChat,keyType,algorithm):
     """Exchange keys with a friend user using Diffie-Hellman on elliptic curves protocol.
     
     Parameters
@@ -354,17 +357,13 @@ class ClientOptionHandler:
       The type of key to exchange
     """
     if algorithm == "RSA":
-      privateAndPublicKeys = RSA.generate(self.rsaKeySizeBits,secrets.token_bytes)
+      p,q,e,d = self.generateRSAKeypair()
+      N = p * q
       clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}")
       if not os.path.exists(clientKeysPath):
         os.makedirs(clientKeysPath)
       with open(os.path.join(clientKeysPath,keyType),"w") as f:
-        f.write(privateAndPublicKeys.export_key().decode("utf-8") )
-      self.keySocket[0].send(pickle.dumps(OptionArgs(2,(self.username[0],friendToChat,privateAndPublicKeys.public_key().export_key(),keyType)))) 
-      optionArgs = pickle.loads(self.keySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
-      if optionArgs["code"] == 1:
-        print(optionArgs["args"])
-        return False
+        f.write(f"P={p}\nQ={q}\nE={e}\nD={d}\nN={N}")
       return True
     elif algorithm == "ElGamal":
       try:
@@ -383,10 +382,10 @@ class ClientOptionHandler:
         return False
       return True
   
-  def processMsg(self,msgBytes,cipherKey,hmacKey,rsaPrivateKey,elgamalPrivateKey):
+  def processMsg(self,msgBytes,cipherKey,hmacKey,rsaPrivateKey,elgamalPrivateKey,p):
     cipherKeyAndHmacKey = (
-      str(len(cipherKey.decode("utf-8"))) + ":" + cipherKey.decode("utf-8") + hmacKey.decode("utf-8")).encode("utf-8"
-    )
+      str(len(cipherKey.decode("utf-8"))) + ":" + str(len(cipherKey.decode("utf-8")) + len(hmacKey.decode("utf-8"))) + ":" + cipherKey.decode("utf-8") + hmacKey.decode("utf-8") + str(p)
+    ).encode("utf-8")
     iv                  = self.cipherMsg(cipherKeyAndHmacKey,self.ivKey,self.iv)
     cipherText          = self.cipherMsg(msgBytes,cipherKey,iv)
     hmac                = self.calculateMsgHmac(cipherText,hmacKey)
@@ -414,9 +413,41 @@ class ClientOptionHandler:
       with open(os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}","AESHmacKeys"),"r") as f2:
         hmacKey = f2.read()
         with open(os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}","RSASignatureKeys"),"r") as f3:
-          rsaPrivateKey = f3.read()
-          return (cipherKey,hmacKey,rsaPrivateKey,b"arroz") #TODO: Change this
+          lines = f3.readlines()
+          p = int(lines[0].split("=")[1])
+          q = int(lines[1].split("=")[1])
+          e = int(lines[2].split("=")[1])
+          d = int(lines[3].split("=")[1])
+          N = int(lines[4].split("=")[1])
+          return (cipherKey,hmacKey,(p,q,e,d,N),b"arroz") #TODO: Change this
       
   def printUserInput(self,msg):
     print("\033[A                             \033[A")
     print(f"{{{self.username[0]}}} : {msg}")
+    
+  def generateRSAKeypair(self):
+    p = self.generatePrimeNumber()
+    q = self.generatePrimeNumber()
+    phi_N = (p - 1) * (q - 1)
+    e = 65537
+    d = self.calculatePrivateExponent(e,phi_N)
+    return p,q,e,d
+
+  def generatePrimeNumber(self):
+    while True:
+      num = random.randint(10**307,10**308)
+      if isprime(num):
+        return num
+
+  def calculatePrivateExponent(self,e,phi_N):
+    def extendedGcd(a,b):
+      if b == 0:
+        return a, 1, 0
+      else:
+        d, x, y = extendedGcd(b, a % b)
+        return d, y, x - (a // b) * y
+    _, d, _ = extendedGcd(e, phi_N)
+    d %= phi_N
+    if d < 0:
+      d += phi_N
+    return d

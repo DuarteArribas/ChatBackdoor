@@ -50,20 +50,21 @@ class MsgOptionHandler:
           cipherText        = optionArgs["args"][2]
           iv                = optionArgs["args"][3]
           hmac              = optionArgs["args"][4]
-          rsaSig            = optionArgs["args"][5]
-          elgamalSig        = optionArgs["args"][6]
+          N                 = optionArgs["args"][5]
+          e                 = optionArgs["args"][6]
+          rsaPublicKey = RSA.construct((N,e)).publickey()
+          rsaSig            = optionArgs["args"][7]
+          elgamalSig        = optionArgs["args"][8]
           clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{username}-{self.username[0]}")
           with open(os.path.join(clientKeysPath,"AESCipherKeys"),"r") as f:
             cipherKey = f.read().encode("utf-8")
             with open(os.path.join(clientKeysPath,"AESHmacKeys"),"r") as f2:
               hmacKey = f2.read().encode("utf-8")
-              with open(os.path.join(clientKeysPath,"RSASignatureKeys"),"r") as f3:
-                rsaSignatureKey = RSA.import_key(f3.read())
-                message = self.decipherMsg(cipherText,cipherKey,iv)
-                if hmac == self.calculateMsgHmac(cipherText,hmacKey):
-                  print(f"\t\t{username}: {message} (✓)")
-                else:
-                  print(f"\t\t{username}: {message} (✖)")
+              message = self.decipherMsg(cipherText,cipherKey,iv)
+              if hmac == self.calculateMsgHmac(cipherText,hmacKey) and self.verifyRSADigitalSignature(message.encode("utf-8"),rsaSig,rsaPublicKey):
+                print(f"\t\t{username}: {message} (✓)")
+              else:
+                print(f"\t\t{username}: {message} (✖)")
       except Exception as e:
         print(e)
   
@@ -76,7 +77,11 @@ class MsgOptionHandler:
     h.update(msg)
     return h.hexdigest()
   
-  def calculateRSADigitalSignature(self,msg,rsaPrivateKey):
+  def verifyRSADigitalSignature(self,msg,rsaSig,rsaPublicKey):
     msgHash = SHA512.new(msg)
-    signer = pkcs1_15.new(rsaPrivateKey)    
-    return signer.sign(msgHash)
+    verifier = pkcs1_15.new(rsaPublicKey)
+    try:
+      verifier.verify(msgHash,rsaSig)
+      return True
+    except (ValueError,TypeError):
+      return False

@@ -46,14 +46,6 @@ class KeyOptionHandler:
           with open(os.path.join(clientKeysPath,optionArgs['args'][2]),"w") as f:
             f.write(key)
           self.keySocket[0].send(pickle.dumps(OptionArgs(1,(optionArgs['args'][0],keys[0]))))
-        elif optionArgs["code"] == 3:
-          clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{optionArgs['args'][0]}-{self.username[0]}")
-          print(clientKeysPath)
-          if not os.path.exists(clientKeysPath):
-            os.makedirs(clientKeysPath)
-          with open(os.path.join(clientKeysPath,optionArgs['args'][2]),"w") as f:
-            f.write(optionArgs['args'][1].decode("utf-8"))
-          self.keySocket[0].send(pickle.dumps(OptionArgs(4,("Success"))))
         elif optionArgs["code"] == 4:
           clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{optionArgs['args'][0]}-{self.username[0]}",optionArgs['args'][2])
           if not os.path.exists(clientKeysPath):
