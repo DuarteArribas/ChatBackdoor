@@ -101,7 +101,7 @@ class MsgExchangeHandler:
       with open(f"server/out/{username}-{friendUsername}-{fileHash}.txt","r") as f:
         newMsg = f.read()
       os.remove(f"server/out/{username}-{friendUsername}-{fileHash}.txt")
-      if newMsg != message:
+      if newMsg != message.decode("utf-8"):
         print("The original message was changed.")
       else:
         print("The original message was not changed.")

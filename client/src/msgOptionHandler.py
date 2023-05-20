@@ -54,28 +54,22 @@ class MsgOptionHandler:
           elgamalSig        = optionArgs["args"][6]
           clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{username}-{self.username[0]}")
           with open(os.path.join(clientKeysPath,"AESCipherKeys"),"r") as f:
-            cipherKey = f.read()
+            cipherKey = f.read().encode("utf-8")
             with open(os.path.join(clientKeysPath,"AESHmacKeys"),"r") as f2:
-              hmacKey = f2.read()
+              hmacKey = f2.read().encode("utf-8")
               with open(os.path.join(clientKeysPath,"RSASignatureKeys"),"r") as f3:
-                rsaSignatureKey = f3.read()
+                rsaSignatureKey = RSA.import_key(f3.read())
                 message = self.decipherMsg(cipherText,cipherKey,iv)
                 if hmac == self.calculateMsgHmac(cipherText,hmacKey):
-                  print(f"\t\t{self.username[0]}: {message} (✓)")
+                  print(f"\t\t{username}: {message} (✓)")
                 else:
-                  
-                  print(f"\t\t{self.username[0]}: {message} (✖)")
+                  print(f"\t\t{username}: {message} (✖)")
       except Exception as e:
         print(e)
   
   def decipherMsg(self,cipherText,cipherKey,iv):
     cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])
     return unpad(cipher.decrypt(cipherText),AES.block_size).decode("utf-8")
-  
-  def cipherMsg(self,msg,cipherKey,iv):
-    cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])
-    cipherTextBytes = cipher.encrypt(pad(msg,AES.block_size))
-    return cipherTextBytes
 
   def calculateMsgHmac(self,msg,hmacKey):
     h = HMAC.new(hmacKey,digestmod = SHA512)
