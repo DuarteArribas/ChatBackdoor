@@ -111,4 +111,4 @@ class ChatClient:
         self.msgSocket.append(s3)
       else:
         self.msgSocket[0] = s3 
-      self.self.msgOptionHandler.handleClientMsgExchange()
+      self.msgOptionHandler.handleClientMsgExchange()

@@ -61,20 +61,21 @@ class MsgOptionHandler:
                 rsaSignatureKey = f3.read()
                 message = self.decipherMsg(cipherText,cipherKey,iv)
                 if hmac == self.calculateMsgHmac(cipherText,hmacKey):
-                  print(f"\t\t{self.username[0]}: {message}")
+                  print(f"\t\t{self.username[0]}: {message} (✓)")
                 else:
-                  print(f"\t\t{self.username[0]}: {message} (HMAC verification failed)")
+                  
+                  print(f"\t\t{self.username[0]}: {message} (✖)")
       except Exception as e:
         print(e)
   
   def decipherMsg(self,cipherText,cipherKey,iv):
-    cipher = AES.new(cipherKey.encode("utf-8"),AES.MODE_CBC,iv.encode("utf-8"))
+    cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])
     return unpad(cipher.decrypt(cipherText),AES.block_size).decode("utf-8")
   
   def cipherMsg(self,msg,cipherKey,iv):
-    cipher = AES.new(pad(cipherKey,AES.block_size),AES.MODE_CBC,iv)
+    cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])
     cipherTextBytes = cipher.encrypt(pad(msg,AES.block_size))
-    return cipherTextBytes.decode('utf-8')
+    return cipherTextBytes
 
   def calculateMsgHmac(self,msg,hmacKey):
     h = HMAC.new(hmacKey,digestmod = SHA512)
@@ -83,5 +84,5 @@ class MsgOptionHandler:
   
   def calculateRSADigitalSignature(self,msg,rsaPrivateKey):
     msgHash = SHA512.new(msg)
-    signer = pkcs1_15.new(rsaPrivateKey)
+    signer = pkcs1_15.new(rsaPrivateKey)    
     return signer.sign(msgHash)

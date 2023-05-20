@@ -9,7 +9,7 @@ from src.chap             import Chap
 
 class ClientHandler:
   # == Methods ==
-  def __init__(self,con,cur,connectedUsernames,listOfClients,listOfKeyExchangeClients,listOfMsgExchangeClients,clientAndUsernames,keyClientAndUsernames,msgClientAndUsernames,ivKey):
+  def __init__(self,con,cur,connectedUsernames,listOfClients,listOfKeyExchangeClients,listOfMsgExchangeClients,clientAndUsernames,keyClientAndUsernames,msgClientAndUsernames):
     """Initalize handler.
     
     Parameters
@@ -40,8 +40,7 @@ class ClientHandler:
       7: self.showFriendsList,
       8: self.removeFriend,
       9: self.logout,
-      10: self.showFriendsListOnline,
-      11: self.handleNewMessage
+      10: self.showFriendsListOnline
     }
     self.con                      = con
     self.cur                      = cur
@@ -52,8 +51,6 @@ class ClientHandler:
     self.clientAndUsernames       = clientAndUsernames
     self.keyClientAndUsernames    = keyClientAndUsernames
     self.msgClientAndUsernames    = msgClientAndUsernames
-    self.ivKey                    = ivKey
-    self.iv = b'J\xc7\xdc\xd33#D\xf8\xcf\x86o\x97\x81\xe0f\xcb'
 
   def process(self,option,args = None):
     """Process an option received by the client and call the appropriate client handler method.

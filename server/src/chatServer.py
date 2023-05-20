@@ -5,6 +5,7 @@ from _thread                import *
 from src.utils.optionArgs   import *
 from src.clientHandler      import *
 from src.keyExchangeHandler import *
+from src.msgExchangeHandler import *
 
 class ChatServer:
   """
@@ -44,7 +45,8 @@ class ChatServer:
     self.maxClients               = int(maxClients)
     self.con                      = con
     self.cur                      = cur
-    self.ivKey                    = ivKey
+    self.ivKey                    = ivKey.encode("utf-8")
+    self.iv = b'J\xc7\xdc\xd33#D\xf8\xcf\x86o\x97\x81\xe0f\xcb'
     self.listOfClients            = []
     self.listOfKeyExchangeClients = []
     self.listOfMsgExchangeClients = []
@@ -61,14 +63,21 @@ class ChatServer:
       self.listOfMsgExchangeClients,
       self.clientAndUsernames,
       self.keyClientAndUsernames,
-      self.msgClientAndUsernames,
-      self.ivKey
+      self.msgClientAndUsernames
     )
     self.keyExchangeHandler       = KeyExchangeHandler(
       self.con,
       self.cur,
       self.connectedUsernames,
       self.keyClientAndUsernames
+    )
+    self.msgExchangeHandler       = MsgExchangeHandler(
+      self.con,
+      self.cur,
+      self.connectedUsernames,
+      self.msgClientAndUsernames,
+      self.ivKey,
+      self.iv
     )
 
   def runServer(self):
@@ -160,7 +169,7 @@ class ChatServer:
     client : socketObject
       The client to handle
     """
-    while True: 
+    while True:
       try:
         # Receive client data
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
@@ -168,5 +177,5 @@ class ChatServer:
         response = self.msgExchangeHandler.process(opt_args.option,opt_args.args)
         # Send response to client
         client.send(pickle.dumps(response))
-      except Exception: #handle client disconnection gracefully
+      except Exception as e: #handle client disconnection gracefully
         pass
