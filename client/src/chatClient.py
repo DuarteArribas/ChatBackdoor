@@ -42,9 +42,10 @@ class ChatClient:
     self.rsaKeySizeBits      = rsaKeySizeBits
     self.elGamalKeySizeBits  = elGamalKeySizeBits
     self.ivKey               = ivKey
-    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.msgSocket,self.menuHandler,self.username,self.clientKeysPath,self.rsaKeySizeBits,self.elGamalKeySizeBits,self.ivKey)
+    self.currChattingFriend  = [None]
+    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.msgSocket,self.menuHandler,self.username,self.clientKeysPath,self.rsaKeySizeBits,self.elGamalKeySizeBits,self.ivKey,self.currChattingFriend)
     self.keyOptionHandler = KeyOptionHandler(self.keySocket,self.clientKeysPath,self.username)
-    self.msgOptionHandler = MsgOptionHandler(self.msgSocket,self.clientKeysPath,self.username)
+    self.msgOptionHandler = MsgOptionHandler(self.msgSocket,self.clientKeysPath,self.username,self.menuHandler,self.currChattingFriend)
   
   def runClient(self):
     """Run the client, initializing its threads."""

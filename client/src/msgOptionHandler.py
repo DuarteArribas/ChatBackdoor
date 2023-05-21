@@ -11,7 +11,7 @@ from Crypto.PublicKey     import ElGamal
 from Crypto.Hash          import HMAC, SHA512
 from Crypto.Signature     import pkcs1_15
 from Crypto.Util.Padding import unpad
-
+from src.menu import Menu
 class MsgOptionHandler:
   """
   Attributes
@@ -23,7 +23,7 @@ class MsgOptionHandler:
   NUMBER_BYTES_TO_RECEIVE = 16384
 
   # == Methods ==
-  def __init__(self,msgSocket,clientKeysPath,username):
+  def __init__(self,msgSocket,clientKeysPath,username,menuHandler,currChattingFriend):
     """Initialize the key option handler.
     
     Parameters
@@ -38,6 +38,8 @@ class MsgOptionHandler:
     self.msgSocket  = msgSocket
     self.clientKeysPath = clientKeysPath
     self.username = username
+    self.menuHandler = menuHandler
+    self.currChattingFriend = currChattingFriend
   
   def handleClientMsgExchange(self):
     """Handle the client key exchange."""
@@ -45,8 +47,8 @@ class MsgOptionHandler:
       try:
         optionArgs = pickle.loads(self.msgSocket[0].recv(MsgOptionHandler.NUMBER_BYTES_TO_RECEIVE))
         if optionArgs["code"] == 2:
-          username          = optionArgs["args"][0]
-          friendUsername    = optionArgs["args"][1]
+          friendUsername    = optionArgs["args"][0]
+          username          = optionArgs["args"][1]
           cipherText        = optionArgs["args"][2]
           iv                = optionArgs["args"][3]
           hmac              = optionArgs["args"][4]
@@ -54,17 +56,19 @@ class MsgOptionHandler:
           e                 = optionArgs["args"][6]
           rsaPublicKey      = RSA.construct((N,e))
           rsaSig            = optionArgs["args"][7]
-          elgamalSig        = optionArgs["args"][8]
-          clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{username}-{self.username[0]}")
+          clientKeysPath = os.path.join(self.clientKeysPath,f"{username}Keys",f"{friendUsername}-{username}")
           with open(os.path.join(clientKeysPath,"AESCipherKeys"),"r") as f:
             cipherKey = f.read().encode("utf-8")
             with open(os.path.join(clientKeysPath,"AESHmacKeys"),"r") as f2:
               hmacKey = f2.read().encode("utf-8")
               message = self.decipherMsg(cipherText,cipherKey,iv)
-              if hmac == self.calculateMsgHmac(cipherText,hmacKey) and self.verifyRSADigitalSignature(cipherText,rsaSig,rsaPublicKey):
-                print(f"\t\t{username}: {message} (✓)")
-              else:
-                print(f"\t\t{username}: {message} (✖)")
+              print(self.currChattingFriend[0])
+              print(friendUsername)
+              if self.menuHandler.currMenu == Menu.MENUS.CHAT and self.currChattingFriend[0] == friendUsername:
+                if hmac == self.calculateMsgHmac(cipherText,hmacKey) and self.verifyRSADigitalSignature(cipherText,rsaSig,rsaPublicKey):
+                  print(f"\t\t{friendUsername}: {message} (✓)")
+                else:
+                  print(f"\t\t{friendUsername}: {message} (✖)")
       except Exception as e:
         print(e)
   

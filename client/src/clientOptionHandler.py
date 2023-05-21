@@ -30,7 +30,7 @@ class ClientOptionHandler:
   NUMBER_BYTES_TO_RECEIVE = 16384
   
   # == Methods ==
-  def __init__(self,mainSocket,keySocket,msgSocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey):
+  def __init__(self,mainSocket,keySocket,msgSocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey,currChattingFriend):
     """Initalize handler.
     
     Parameters
@@ -50,6 +50,7 @@ class ClientOptionHandler:
     self.elGamalKeySizeBits = int(elGamalKeySizeBits)
     self.ivKey = ivKey.encode("utf-8")
     self.iv = b'J\xc7\xdc\xd33#D\xf8\xcf\x86o\x97\x81\xe0f\xcb'
+    self.currChattingFriend = currChattingFriend
 
   def handleClientActions(self,option):
     """Handle client actions.
@@ -86,8 +87,10 @@ class ClientOptionHandler:
     elif self.menuHandler.currMenu == Menu.MENUS.CHAT:
       friendToChat = self.getFriend()
       if friendToChat == None:
+        self.currChattingFriend[0] = None
         self.menuHandler.currMenu = Menu.MENUS.MAIN
       else:
+        self.currChattingFriend[0] = friendToChat
         self.chat(friendToChat)
           
   def chapRegister(self):
@@ -297,29 +300,27 @@ class ClientOptionHandler:
       return
     if not self.generatePublicKeys(friendToChat,"RSASignatureKeys","RSA"):
       return
-    if not self.generatePublicKeys(friendToChat,"ElGamalSignatureKeys","ElGamal"):
-      return
     print(f"You can now start chatting with your friend {friendToChat}.")
     msg = input("> ")
     while msg != "/0":
-      cipherKey,hmacKey,params,elgamalPrivateKey = self.getKeys(friendToChat)
+      cipherKey,hmacKey,params = self.getKeys(friendToChat)
       p,q,e,d,n = params
       n = int(n)
       cipherKey     = cipherKey.encode("utf-8")
       hmacKey       = hmacKey.encode("utf-8")
       rsaPrivateKey = RSA.construct((n,e,d,p,q))
       msgBytes      = msg.encode("utf-8")
-      cipherText,iv,hmac,rsaSig,elgamalSig = self.processMsg(
+      cipherText,iv,hmac,rsaSig = self.processMsg(
         msgBytes,
         cipherKey,
         hmacKey,
         rsaPrivateKey,
-        elgamalPrivateKey,
         p
       )
-      self.msgSocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,cipherText,iv,hmac,n,e,rsaSig,elgamalSig))))
+      self.msgSocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,cipherText,iv,hmac,n,e,rsaSig))))
       self.printUserInput(msg)
       msg = input("> ")
+    self.currChattingFriend[0] = None
   
   def exchangeKeys(self,friendToChat,keyType):
     """Exchange keys with a friend user using Diffie-Hellman on elliptic curves protocol.
@@ -367,24 +368,8 @@ class ClientOptionHandler:
       with open(os.path.join(clientKeysPath,keyType),"w") as f:
         f.write(f"P={p}\nQ={q}\nE={e}\nD={d}\nN={N}")
       return True
-    elif algorithm == "ElGamal":
-      try:
-        privateAndPublicKeys = ElGamal.generate(256,secrets.token_bytes)
-      except Exception as e:
-        print(e)
-      clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}")
-      if not os.path.exists(clientKeysPath):
-        os.makedirs(clientKeysPath)
-      with open(os.path.join(clientKeysPath,keyType),"w") as f:
-        f.write(privateAndPublicKeys.x.to_bytes().decode("latin-1'") )
-      self.keySocket[0].send(pickle.dumps(OptionArgs(3,(self.username[0],friendToChat,(privateAndPublicKeys.y.to_bytes(),privateAndPublicKeys.g.to_bytes(),privateAndPublicKeys.p.to_bytes()),keyType)))) 
-      optionArgs = pickle.loads(self.keySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
-      if optionArgs["code"] == 1:
-        print(optionArgs["args"])
-        return False
-      return True
   
-  def processMsg(self,msgBytes,cipherKey,hmacKey,rsaPrivateKey,elgamalPrivateKey,p):
+  def processMsg(self,msgBytes,cipherKey,hmacKey,rsaPrivateKey,p):
     cipherKeyAndHmacKey = (
       str(len(cipherKey.decode("utf-8"))) + ":" + str(len(cipherKey.decode("utf-8")) + len(hmacKey.decode("utf-8"))) + ":" + cipherKey.decode("utf-8") + hmacKey.decode("utf-8") + str(p)
     ).encode("utf-8")
@@ -392,7 +377,7 @@ class ClientOptionHandler:
     cipherText          = self.cipherMsg(msgBytes,cipherKey,iv)
     hmac                = self.calculateMsgHmac(cipherText,hmacKey)
     rsaSig              = self.calculateRSADigitalSignature(cipherText,rsaPrivateKey)
-    return (cipherText,iv,hmac,rsaSig,b"arroz") #TODO: Change this
+    return (cipherText,iv,hmac,rsaSig)
   
   def cipherMsg(self,msg,cipherKey,iv):
     cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])
@@ -421,7 +406,7 @@ class ClientOptionHandler:
           e = int(lines[2].split("=")[1])
           d = int(lines[3].split("=")[1])
           n = lines[4].split("=")[1]
-          return (cipherKey,hmacKey,(p,q,e,d,n),b"arroz") #TODO: Change this
+          return (cipherKey,hmacKey,(p,q,e,d,n))
       
   def printUserInput(self,msg):
     print("\033[A                             \033[A")

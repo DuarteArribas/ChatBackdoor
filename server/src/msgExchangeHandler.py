@@ -96,7 +96,6 @@ class MsgExchangeHandler:
       d                 = self.calculateDFromParams(p,q,e)
       rsaPrivateKey     = RSA.construct((N,e,d,p,q))
       rsaSig            = args[7]
-      elgamalSig        = args[8]
       message           = self.decipherMsg(cipherText,cipherKey,iv)
       print(f"{username} just sent a message to {friendUsername}: {message.decode('utf-8')}. 15 seconds to change the message contents before being sent.")
       fileHash = SHA512.new((username + friendUsername + message.decode("utf-8") + datetime.now().strftime("%d/%m/%Y %H:%M:%S")).encode("utf-8")).hexdigest()
@@ -118,7 +117,7 @@ class MsgExchangeHandler:
       self.con.commit()
       for host,u in self.msgClientAndUsernames:
         if u == friendUsername:
-          host.send(pickle.dumps({'code': 2,'args': (username,friendUsername,cipherText,iv,hmac,N,e,rsaSig,elgamalSig)}))
+          host.send(pickle.dumps({'code': 2,'args': (username,friendUsername,cipherText,iv,hmac,N,e,rsaSig)}))
           return host
       return {'code': 0,'args': "Message sent."}
     except Exception as err:
