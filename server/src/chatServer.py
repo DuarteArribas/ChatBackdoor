@@ -47,21 +47,17 @@ class ChatServer:
     self.cur                      = cur
     self.ivKey                    = ivKey.encode("utf-8")
     self.iv = b'J\xc7\xdc\xd33#D\xf8\xcf\x86o\x97\x81\xe0f\xcb'
-    self.listOfClients            = []
     self.listOfKeyExchangeClients = []
     self.listOfMsgExchangeClients = []
     self.connectedUsernames       = []
-    self.clientAndUsernames       = []
     self.keyClientAndUsernames    = []
     self.msgClientAndUsernames    = []
     self.clientHandler            = ClientHandler(
       self.con,
       self.cur,
       self.connectedUsernames,
-      self.listOfClients,
       self.listOfKeyExchangeClients,
       self.listOfMsgExchangeClients,
-      self.clientAndUsernames,
       self.keyClientAndUsernames,
       self.msgClientAndUsernames
     )
@@ -97,7 +93,6 @@ class ChatServer:
       print("The server is listening on port " + str(self.mainSocketPort) + "...")
       while True:
         client,clientAddress = s.accept()
-        self.listOfClients.append(client)
         start_new_thread(self.clientThread,(client,clientAddress))
   
   def runKeyThread(self):
@@ -129,16 +124,16 @@ class ChatServer:
     client : socketObject
       The client to handle
     """
-    while True: 
-      try:
+    try:
+      while True:
         # Receive client data
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client data
         response = self.clientHandler.process(opt_args.option,opt_args.args)
         # Send response to client
         client.send(pickle.dumps(response))
-      except Exception: #handle client disconnection gracefully
-        pass
+    except Exception: #handle client disconnection gracefully
+      pass
   
   def keyExchangeThread(self,client,clientAddress):
     """Thread to handle the clients' operations.
@@ -147,8 +142,8 @@ class ChatServer:
     client : socketObject
       The client to handle
     """
-    while True:
-      try:
+    try:
+      while True:
         # Receive client1 data
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client1 data
@@ -159,8 +154,8 @@ class ChatServer:
         response = self.keyExchangeHandler.process(opt_args.option,opt_args.args)
         # Send response back to client1
         client.send(pickle.dumps(response))
-      except Exception: #handle client disconnection gracefully
-        pass
+    except Exception: #handle client disconnection gracefully
+      pass
       
   def msgExchangeThread(self,client,clientAddress):
     """Thread to handle the clients' operations.
@@ -169,13 +164,13 @@ class ChatServer:
     client : socketObject
       The client to handle
     """
-    while True:
-      try:
+    try:
+      while True:
         # Receive client data
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client data
         response = self.msgExchangeHandler.process(opt_args.option,opt_args.args)
         # Send response to client
         client.send(pickle.dumps(response))
-      except Exception as e: #handle client disconnection gracefully
-        pass
+    except Exception as e: #handle client disconnection gracefully
+      pass

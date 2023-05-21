@@ -31,7 +31,7 @@ class ClientOptionHandler:
   NUMBER_BYTES_TO_RECEIVE = 16384
   
   # == Methods ==
-  def __init__(self,mainSocket,keySocket,msgSocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey,currChattingFriend):
+  def __init__(self,mainSocket,keySocket,msgSocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey,currChattingFriend,canBazar):
     """Initalize handler.
     
     Parameters
@@ -52,6 +52,7 @@ class ClientOptionHandler:
     self.ivKey = ivKey.encode("utf-8")
     self.iv = b'J\xc7\xdc\xd33#D\xf8\xcf\x86o\x97\x81\xe0f\xcb'
     self.currChattingFriend = currChattingFriend
+    self.canBazar = canBazar
 
   def handleClientActions(self,option):
     """Handle client actions.
@@ -68,6 +69,7 @@ class ClientOptionHandler:
       elif option == 2:
         self.menuHandler.currMenu = Menu.MENUS.LOGIN
       elif option == 0:
+        self.canBazar[0] = True
         return
     elif self.menuHandler.currMenu == Menu.MENUS.REGISTER:
       if option == 1:
@@ -371,7 +373,7 @@ class ClientOptionHandler:
   
   def logout(self):
     """Logs user out."""
-    self.mainSocket[0].send(pickle.dumps(OptionArgs(9,(self.username[0],))))
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(9,(self.username[0],str(self.mainSocket[0]),str(self.keySocket[0]),str(self.msgSocket[0])))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
       print(optionArgs["args"])

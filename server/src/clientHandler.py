@@ -13,7 +13,7 @@ import scrypt
 
 class ClientHandler:
   # == Methods ==
-  def __init__(self,con,cur,connectedUsernames,listOfClients,listOfKeyExchangeClients,listOfMsgExchangeClients,clientAndUsernames,keyClientAndUsernames,msgClientAndUsernames):
+  def __init__(self,con,cur,connectedUsernames,listOfKeyExchangeClients,listOfMsgExchangeClients,keyClientAndUsernames,msgClientAndUsernames):
     """Initalize handler.
     
     Parameters
@@ -56,10 +56,8 @@ class ClientHandler:
     self.con                      = con
     self.cur                      = cur
     self.connectedUsernames       = connectedUsernames
-    self.listOfClients            = listOfClients
     self.listOfKeyExchangeClients = listOfKeyExchangeClients
     self.listOfMsgExchangeClients = listOfMsgExchangeClients
-    self.clientAndUsernames       = clientAndUsernames
     self.keyClientAndUsernames    = keyClientAndUsernames
     self.msgClientAndUsernames    = msgClientAndUsernames
     self.zero                     = ZeroKnowledgeProtocol()
@@ -329,9 +327,6 @@ class ClientHandler:
       nonce      = self.getUserNonce(username)
       if challenge == Chap.getChapChallenge(nonce,secret):
         self.connectedUsernames.append(username)
-        for client in self.listOfClients:
-          if str(client) == mainSocket:
-            self.clientAndUsernames.append((client,username))
         for client in self.listOfKeyExchangeClients:
           if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(keySocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
             self.keyClientAndUsernames.append((client,username))
@@ -545,9 +540,6 @@ class ClientHandler:
         # z = β**(a*e+r) * ((β**(−a))**e) mod P = β**r mod P = x
         if z == x:
           self.connectedUsernames.append(username)
-          for client in self.listOfClients:
-            if str(client) == mainSocket:
-              self.clientAndUsernames.append((client,username))
           for client in self.listOfKeyExchangeClients:
             if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(keySocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
               self.keyClientAndUsernames.append((client,username))
@@ -835,10 +827,32 @@ class ClientHandler:
     """
     try:
       username = args[0]
+      mainSocket = args[1]
+      keySocket  = args[2]
+      msgSocket  = args[3]
+      print("ConnectedUsernames: ",self.connectedUsernames)
+      print("ListOfKeyExchangeClients: ",self.listOfKeyExchangeClients)
+      print("ListOfMsgExchangeClients: ",self.listOfMsgExchangeClients)
+      print("keyClientAndUsernames: ",self.keyClientAndUsernames)
+      print("msgClientAndUsernames: ",self.msgClientAndUsernames)
       if username in self.connectedUsernames:
         self.connectedUsernames.remove(username)
+      print("1")
+      for client in self.listOfKeyExchangeClients:
+        if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(keySocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
+          self.keyClientAndUsernames.remove((client,username))
+      print("b")
+      for client in self.listOfMsgExchangeClients:
+        if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(msgSocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
+          self.msgClientAndUsernames.remove((client,username))
+      print("ConnectedUsernames: ",self.connectedUsernames)
+      print("ListOfKeyExchangeClients: ",self.listOfKeyExchangeClients)
+      print("ListOfMsgExchangeClients: ",self.listOfMsgExchangeClients)
+      print("keyClientAndUsernames: ",self.keyClientAndUsernames)
+      print("msgClientAndUsernames: ",self.msgClientAndUsernames)
       return {'code': 0,'args': "Logged out."}
     except Exception as e:
+      print(e)
       return {'code': 1,'args': "An unknown error occurred."}
   
   def getUserSalt(self,args):
