@@ -28,8 +28,10 @@ class Menu():
       0 for returning to main menu
   """
   # == Attributes ==
-  MENUS = Enum('MENUS','INITIAL MAIN FRIEND CHAT')
-  INITIAL_MENU_OPTIONS = [0,1,2,3]
+  MENUS = Enum('MENUS','INITIAL MAIN FRIEND CHAT REGISTER LOGIN')
+  INITIAL_MENU_OPTIONS = [0,1,2]
+  REGISTER_MENU_OPTIONS = [0,1,2]
+  LOGIN_MENU_OPTIONS = [0,1,2]
   MAIN_MENU_OPTIONS    = [0,1,2]
   FRIEND_MENU_OPTIONS  = [0,1,2,3,4]
   
@@ -44,7 +46,6 @@ class Menu():
     print("Welcome to the chat! What do you want to do?")
     print("1 - Register")
     print("2 - Login")
-    print("3 - Login (Zero Knowledge Proof)")
     print("0 - Exit")
     print("=============================================")
     
@@ -69,6 +70,70 @@ class Menu():
         break
       print(f"Please enter a valid option ({Menu.INITIAL_MENU_OPTIONS[0]}-{Menu.INITIAL_MENU_OPTIONS[-1]})!")
       Menu.printInitialMenu()
+    return option
+  
+  @staticmethod
+  def printRegisterMenu():
+    print("\n=============================================")
+    print("Which register method do you wish to use?")
+    print("1 - Register using CHAP (strong authentication)")
+    print("2 - Register using Schnorr Protocol (zero-knowledge authentication)")
+    print("0 - Exit")
+    print("=============================================")
+  
+  @staticmethod
+  def getRegisterOption():
+    """Get user's input in the initial menu.
+
+    Return
+    ----------
+    option : int
+      Option chosen by the user
+    """
+    option = -1
+    while True:
+      try:
+        option = int(input("Option: "))
+      except ValueError:
+        print(f"Please enter a valid option ({Menu.REGISTER_MENU_OPTIONS[0]}-{Menu.REGISTER_MENU_OPTIONS[-1]})!")
+        Menu.printRegisterMenu()
+        continue
+      if option in Menu.REGISTER_MENU_OPTIONS:
+        break
+      print(f"Please enter a valid option ({Menu.REGISTER_MENU_OPTIONS[0]}-{Menu.REGISTER_MENU_OPTIONS[-1]})!")
+      Menu.printRegisterMenu()
+    return option
+  
+  @staticmethod
+  def printLoginMenu():
+    print("\n=============================================")
+    print("Which login method do you wish to use?")
+    print("1 - Login using CHAP (strong authentication)")
+    print("2 - Login using Schnorr Protocol (zero-knowledge authentication)")
+    print("0 - Exit")
+    print("=============================================")
+  
+  @staticmethod
+  def getLoginOption():
+    """Get user's input in the initial menu.
+
+    Return
+    ----------
+    option : int
+      Option chosen by the user
+    """
+    option = -1
+    while True:
+      try:
+        option = int(input("Option: "))
+      except ValueError:
+        print(f"Please enter a valid option ({Menu.LOGIN_MENU_OPTIONS[0]}-{Menu.LOGIN_MENU_OPTIONS[-1]})!")
+        Menu.printLoginMenu()
+        continue
+      if option in Menu.LOGIN_MENU_OPTIONS:
+        break
+      print(f"Please enter a valid option ({Menu.LOGIN_MENU_OPTIONS[0]}-{Menu.LOGIN_MENU_OPTIONS[-1]})!")
+      Menu.printLoginMenu()
     return option
   
   @staticmethod

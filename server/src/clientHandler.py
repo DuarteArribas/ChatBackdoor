@@ -43,9 +43,12 @@ class ClientHandler:
       8: self.removeFriend,
       9: self.logout,
       10: self.showFriendsListOnline,
-      11: self.exchangePreParametersSchnorr,
-      12: self.autenticationSchnorr1,
-      13: self.autenticationSchnorr2
+      11: self.getIsUserInDB,
+      12: self.registerSchnorr1,
+      13: self.registerSchnorr2,
+      14: self.loginSchnorr1,
+      15: self.loginSchnorr2,
+      16: self.loginSchnorr3
     }
     self.con                      = con
     self.cur                      = cur
@@ -100,7 +103,7 @@ class ClientHandler:
     try:
       username = args[0]
       self.removeTempUsers(username)
-      if self.isUserAlreadyInDB(username):
+      if self.isUserAlreadyInDB(username,"Chap"):
         return {'code': 1,'args': "User already exists."}
       ec   = EllipticCurves()
       X,dA = ec.generateKeys()
@@ -120,7 +123,7 @@ class ClientHandler:
     self.cur.execute("DELETE FROM users WHERE temp = 1 AND username = ?;",(username,))
     self.con.commit()
   
-  def isUserAlreadyInDB(self,username):
+  def isUserAlreadyInDB(self,username,typeOfAuthentication):
     """Check if user already exists (if so they can't be registered).
     
     Parameters
@@ -133,8 +136,13 @@ class ClientHandler:
     List
       Contains all users with such username (since they're unique, it will be empty or with one element) 
     """
-    res = self.cur.execute(f"SELECT username FROM users WHERE username LIKE ?;",(username,))
-    return res.fetchall() != []
+    if typeOfAuthentication == "Chap":
+      res = self.cur.execute(f"SELECT username FROM users WHERE username LIKE ? AND password <> '';",(username,))
+      return res.fetchall() != []
+    elif typeOfAuthentication == "Schnorr":
+      res = self.cur.execute(f"SELECT username FROM users WHERE username LIKE ? AND publicKey <> '';",(username,))
+      return res.fetchall() != []
+      
   
   def saveUserInDB(self,username,dA):
     """Save user in the database.
@@ -146,6 +154,7 @@ class ClientHandler:
     dA : int
       Client's "private" key
     """
+    print("bb")
     self.cur.execute("INSERT INTO users (username,dA,temp) VALUES (?,?,?);",(username,str(dA),1))
     self.con.commit()
   
@@ -265,7 +274,7 @@ class ClientHandler:
     """
     try:
       username = args[0]
-      if not self.isUserAlreadyInDB(username):
+      if not self.isUserAlreadyInDB(username,"Chap"):
         return {'code': 1,'args': f"{username} is not yet registered in our database. Register instead, it is easy and secure!"}
       nonce    = str(secrets.randbits(128))
       self.saveUserNonce(username,nonce)
@@ -358,61 +367,171 @@ class ClientHandler:
     res = self.cur.execute("SELECT chapNonce FROM users WHERE username LIKE ?;",(username,))
     return res.fetchall()[0][0]
   
-  def exchangePreParametersSchnorr(self,args):
+  def getIsUserInDB(self,args):
+    """Check if user exists in the database.
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+
+    Return
+    ----------
+    dict
+      With a success code (0) or failure code (1) and the error message
+    """
     try:
       username = args[0]
-      if not self.isUserAlreadyInDB(username):
-        return {'code': 1,'args': f"{username} is not yet registered in our database. Register instead, it is easy and secure!"}
-      
+      if self.isUserAlreadyInDB(username,"Schnorr"):
+        return {'code': 0,'args': "User exists."}
+      else:
+        return {'code': 1,'args': "User does not exist."}
+    except Exception as e:
+      return {'code': 1,'args': "An unknown error occurred."}
+  
+  def registerSchnorr1(self,args):
+    try:
       # Set security parameter t - as the number of bits longer will be the calculation of sucessive prime numbers P and Q
-      self.zero.t = 7
+      username = args[0]
+      t = self.default_t = 7
       # Calculate prime numbers P and Q
-      self.zero.Q = self.zero.calculate_Q(pow(2,2*self.zero.t))
-      self.zero.P = self.zero.calculate_P(self.zero.Q)
+      Q = self.zero.calculate_Q(pow(2,2*t))
+      print(type(Q))
+      P = self.zero.calculate_P(Q)
       # Generate the generator B	
-      self.zero.B = self.zero.generate_B()
-      return {'code': 0,'args': (self.zero.Q,self.zero.P,self.zero.B)}
+      B = self.zero.generate_B(P,Q)
+      self.saveUserInDB2(username,t,P,Q,B)
+      return {'code': 0,'args': (Q,P,B,t)}
+    except Exception as e:
+      print("Errorcucu: ", e)
+      return {'code': 1,'args': "An unknown error occurred."}
+  
+  def saveUserInDB2(self,username,t,P,Q,B):
+    """Save user in the database.
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+    t : int
+      Security parameter
+    """
+    print("aa")
+    self.cur.execute("INSERT INTO users (username,t,P,Q,B,temp) VALUES (?,?,?,?,?,?);",(username,t,P,Q,B,1))
+    self.con.commit()
+  
+  def registerSchnorr2(self,args):
+    try:
+      username = args[0]
+      publicKey = args[1]
+      self.saveUserPublicKey(username,publicKey)
+      return {'code': 0,'args': "User registered successfully."}
+    except Exception as e:
+      print("Error: ", e)
+      return {'code': 1,'args': "An unknown error occurred. User not registered."}
+  
+  def saveUserPublicKey(self,username,publicKey):
+    """Save user's public key in the database.
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+    publicKey : int
+      Client's public key
+    """
+    self.cur.execute("UPDATE users SET publicKey = ?, temp = ? WHERE username LIKE ?;",(publicKey,0,username))
+    self.con.commit()
+  
+  def loginSchnorr1(self,args):
+    try:
+      username = args[0]
+      return {'code': 0,'args': self.getSchnorrParameters(username)}
     except Exception as e:
       print("Error: ", e)
       return {'code': 1,'args': "An unknown error occurred."}
-    
-  def autenticationSchnorr1(self,args):
+  
+  def getSchnorrParameters(self,username):
+    self.cur.execute("SELECT P,Q,B FROM users WHERE username LIKE ?;",(username,))
+    return self.cur.fetchall()[0]
+  
+  def loginSchnorr2(self,args):
     try:
-      # Receive public key from client
-      self.public_key_client = int(args[0])
-
       # 3 - Receive number x from client
-      self.x = int(args[1])
-
-      print("Received from client - public key: ", self.public_key_client)
-      print("Received from client - number: ", self.x)
-
+      username = args[0]
+      x = args[1]
+      print("Received from client - number: ", x)
+      t = self.getTFromDB(username)
       # 4 - Generates random number e and sends it to the client 
-      self.e = random.randint(0,pow(2,self.zero.t) - 1)
-      print('Sending to client - e:', self.e)
-      return {'code': 0,'args': self.e}
-
+      e = random.randint(0,pow(2,t) - 1)
+      self.saveUserX(username,x)
+      self.saveUserE(username,e)
+      print('Sending to client - e:', e)
+      return {'code': 0,'args': e}
     except Exception as err:
+      print(err)
       return {'code': 1,'args': "An unknown error occurred."}
+  
+  def saveUserE(self,username,e):
+    """Save user's e in the database.
     
-  def autenticationSchnorr2(self,args):
+    Parameters
+    ----------
+    username : str
+      Client's username
+    e : int
+      Client's e
+    """
+    self.cur.execute("UPDATE users SET e = ? WHERE username LIKE ?;",(e,username))
+    self.con.commit()
+  
+  def saveUserX(self,username,x):
+    """Save user's x in the database.
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+    x : int
+      Client's x
+    """
+    self.cur.execute("UPDATE users SET x = ? WHERE username LIKE ?;",(x,username))
+    self.con.commit()
+  
+  def getTFromDB(self,username):
+    """Get user's security parameter.
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+
+    Return
+    ----------
+    int
+      Security parameter
+    """
+    res = self.cur.execute("SELECT t FROM users WHERE username LIKE ?;",(username,))
+    return res.fetchall()[0][0]
+  
+  def loginSchnorr3(self,args):
     try:
         # 7 - Receives the response from the client and calculates a z value
-        y = int(args)
+        username = args[0]
+        y = args[1]
         print('Received from client - y:', y)
-
-        z = (pow(int(self.zero.B),y) * pow(self.public_key_client,self.e)) % self.zero.P
+        P,B,e,publicKey,x = self.getSchnorrParameters2(username)
+        z = (pow(B,y) * pow(publicKey,e)) % P
 
         print("--------------------")
         print('Calculated z:', z)
-        print('Number sent by Alice :', self.x)
         print("--------------------")
 
-        # 8 - Verifies if the z value is equal to the public key X
+        # 8 - Verifies if the z value is equal to the value x sent by client
         # If it is, then the client (Alice) is authenticated
         # Else, the client (Alice) is not authenticated
         # z = β**(a*e+r) * ((β**(−a))**e) mod P = β**r mod P = x
-        if z == self.x:
+        if z == x:
           print("SUCCESS: authenticated!")
           return {'code': 0,'args': "Authentication successful."}
         else:
@@ -422,7 +541,9 @@ class ClientHandler:
       print(err)
       return {'code': 1,'args': "An unknown error occurred."}
 
-
+  def getSchnorrParameters2(self,username):
+    self.cur.execute("SELECT P,B,e,publicKey,x FROM users WHERE username LIKE ?;",(username,))
+    return self.cur.fetchall()[0]
   
   def addFriend(self,args):
     """Add friend to the friend's list in the database.

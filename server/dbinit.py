@@ -13,7 +13,7 @@ def main():
   cur = con.cursor()
   # Create table
   try:
-    cur.execute("CREATE TABLE users(username VARCHAR PRIMARY KEY,password VARCHAR, dA TEXT,temp INTEGER,chapNonce TEXT)")
+    cur.execute("CREATE TABLE users(username VARCHAR PRIMARY KEY,password VARCHAR, dA TEXT, t INTEGER, publicKey INTEGER,b INTEGER,P INTEGER,Q INTEGER,e INTEGER,x INTEGER,temp INTEGER,chapNonce TEXT)")
     cur.execute("CREATE TABLE friends(username1 VARCHAR, username2 VARCHAR,acceptance INTEGER,PRIMARY KEY(username1,username2))")
     cur.execute("CREATE TABLE messages(ID INTEGER PRIMARY KEY AUTOINCREMENT,username1 VARCHAR, username2 VARCHAR,message TEXT)")
     con.commit()

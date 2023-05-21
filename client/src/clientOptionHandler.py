@@ -63,11 +63,25 @@ class ClientOptionHandler:
     """
     if self.menuHandler.currMenu == Menu.MENUS.INITIAL:
       if option == 1:
+        self.menuHandler.currMenu = Menu.MENUS.REGISTER
+      elif option == 2:
+        self.menuHandler.currMenu = Menu.MENUS.LOGIN
+      elif option == 0:
+        return
+    elif self.menuHandler.currMenu == Menu.MENUS.REGISTER:
+      if option == 1:
         self.chapRegister()
       elif option == 2:
+        self.schnorrRegister()
+      elif option == 0:
+        self.menuHandler.currMenu = Menu.MENUS.INITIAL
+    elif self.menuHandler.currMenu == Menu.MENUS.LOGIN:
+      if option == 1:
         self.chapLogin()
-      elif option == 3:
+      elif option == 2:
         self.schnorrLogin()
+      elif option == 0:
+        self.menuHandler.currMenu = Menu.MENUS.INITIAL
     elif self.menuHandler.currMenu == Menu.MENUS.MAIN:
       if option == 1:
         self.menuHandler.currMenu = Menu.MENUS.FRIEND
@@ -159,7 +173,43 @@ class ClientOptionHandler:
       print(optionArgs["args"])
       self.menuHandler.currMenu = Menu.MENUS.MAIN
       self.username[0] = username
-
+  
+  def schnorrRegister(self):
+    username = input("Username: (0 to exit) ")
+    if username == "0":
+      return
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(11,(username,))))
+    optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
+    while optionArgs["code"] == 0:
+      print(optionArgs["args"])
+      username = input("Username: (0 to exit) ")
+      if username == "0":
+        return
+      self.mainSocket[0].send(pickle.dumps(OptionArgs(11,(username,))))
+      optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(12,(username,)))) 
+    optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
+    Q = optionArgs["args"][0]
+    P = optionArgs["args"][1]
+    B = optionArgs["args"][2]
+    print("Q, P, B : ", optionArgs["args"][0], "|", optionArgs["args"][1], "|", optionArgs["args"][2])
+    privateKey = random.randint(0,Q-1)
+    print('Private key:',privateKey)
+    publicKey = pow(B, -privateKey, P)
+    print('Sending to server - pk:',publicKey)
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(13,(username,publicKey))))
+    optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
+    if optionArgs["code"] == 1:
+      print(optionArgs["args"])
+      return
+    else:
+      path = f"client/out/{username}Keys/AuthenticationKeys"
+      if not os.path.exists(path):
+        os.makedirs(path)
+      with open(os.path.join(path,"schnorrPrivateKey"),"w") as f:
+        f.write(str(privateKey))
+      print(optionArgs["args"])
+    
   def schnorrLogin(self):
     username = input("Username: (0 to exit) ")
     if username == "0":
@@ -171,51 +221,48 @@ class ClientOptionHandler:
       username = input("Username: (0 to exit) ")
       if username == "0":
         return
-      self.mainSocket[0].send(pickle.dumps(OptionArgs(2,(username,))))
+      self.mainSocket[0].send(pickle.dumps(OptionArgs(11,(username,))))
       optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
-
-    Q = int(optionArgs["args"][0])
-    P = int(optionArgs["args"][1])
-    B = int(optionArgs["args"][2])
-    print("Q, P, B : ", optionArgs["args"][0], "|", optionArgs["args"][1], "|", optionArgs["args"][2])
-  
-    # Pre-condition
-    # Client chooses a private key randomly 
-    # a ← {0,...,Q − 1}
-    x = random.randint(0,Q-1)
-    print('Private key:', x)
-
-    # Pre-condition
-    # Client calculates the public key X using the generator B and a random number a and sends it to the server (Bob)
-    # v = β**(−a) mod P
-    public_key = pow(int(B), -x, P)
-    print('Sending to server - pk:', public_key)
-    #self.mainSocket[0].send(pickle.dumps(OptionArgs(12,(public_key,))))
-
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(14,(username,))))
+    optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
+    if optionArgs["code"] == 1:
+      print(optionArgs["args"])
+      return
+    P,Q,B = optionArgs["args"][0],optionArgs["args"][1],optionArgs["args"][2]
+    
     # 1 - Client chooses a random number r and calculates a number to send to the server 
     # r ← {0, ..., Q − 1}, x = β**r mod P
     r = random.randint(0,Q-1)
     print('Random number:', r)
-    x_send = int(pow(int(B),r,P))
+    x = int(pow(B,r,P))
 
     # 2 - Client (Alice) sends the number x to the server 
-    print('Sending to server - number:', x_send)
-    self.mainSocket[0].send(pickle.dumps(OptionArgs(12,(public_key,x_send))))
+    print('Sending to server - number:', x)
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(15,(username,x))))
 
     # 5 - Receives random number e from the server and calculates the response
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
-    e = int(optionArgs["args"])
+    if optionArgs["code"] == 1:
+      print(optionArgs["args"])
+      return
+    e = optionArgs["args"]
     print('Received from server - e:', e)
-    y = ((x * e) + r) % Q
+    privateKey = 0
+    path = f"client/out/{username}Keys/AuthenticationKeys/SchnorrPrivateKey"
+    if not os.path.exists(path):
+      print(f"Could not find private key on path {path}")
+    with open(path,"r") as f:
+      privateKey = int(f.read())
+    y = ((privateKey * e) + r) % Q
 
     # 6 - Sends the response to the server 
     print('Sending to server - y:', y)
-    self.mainSocket[0].send(pickle.dumps(OptionArgs(13,(y))))
-
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(16,(username,y))))
+    optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
-      print(optionArgs["args"])
+      print("aa",optionArgs["args"])
     elif optionArgs["code"] == 0:
-      print(optionArgs["args"])
+      print("bb",optionArgs["args"])
       self.menuHandler.currMenu = Menu.MENUS.MAIN
       self.username[0] = username
     

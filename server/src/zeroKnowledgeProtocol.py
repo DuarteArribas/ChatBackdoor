@@ -25,12 +25,10 @@ class ZeroKnowledgeProtocol:
         alpha must be a possible generator of P
         With the above condition met, generator can be calculated as B = alpha**((P - 1) // Q) mod P
     '''
-    def generate_B(self):
+    def generate_B(self,P,Q):
         # Generate B
-        alpha = random.choice(self.possible_generators_P(self.P))
-        print("a: ", alpha)
-        print("P: ", self.P)
-        return pow(alpha, (self.P - 1) // self.Q, self.P)
+        alpha = random.choice(self.possible_generators_P(P))
+        return pow(alpha, (P - 1) // Q,P)
         
     # Function that gets possible generators of a prime number p
     # This represents the set of numbers where each of which can be the number a in the protocol

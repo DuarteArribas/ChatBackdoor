@@ -64,6 +64,16 @@ class ChatClient:
         Menu.printInitialMenu()
         option = Menu.getInitialMenuOption()
         self.handleAction(option)
+      elif self.menuHandler.currMenu == Menu.MENUS.REGISTER:
+        Menu.printRegisterMenu()
+        option = Menu.getRegisterOption()
+        self.handleAction(option)
+        option = -1 if option == 0 else option
+      elif self.menuHandler.currMenu == Menu.MENUS.LOGIN:
+        Menu.printLoginMenu()
+        option = Menu.getLoginOption()
+        self.handleAction(option)
+        option = -1 if option == 0 else option
       elif self.menuHandler.currMenu == Menu.MENUS.MAIN:
         Menu.printMainMenu()
         option = Menu.getMainMenuOption()
