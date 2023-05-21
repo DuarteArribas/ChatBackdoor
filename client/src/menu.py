@@ -29,7 +29,7 @@ class Menu():
   """
   # == Attributes ==
   MENUS = Enum('MENUS','INITIAL MAIN FRIEND CHAT')
-  INITIAL_MENU_OPTIONS = [0,1,2]
+  INITIAL_MENU_OPTIONS = [0,1,2,3]
   MAIN_MENU_OPTIONS    = [0,1,2]
   FRIEND_MENU_OPTIONS  = [0,1,2,3,4]
   
@@ -44,6 +44,7 @@ class Menu():
     print("Welcome to the chat! What do you want to do?")
     print("1 - Register")
     print("2 - Login")
+    print("3 - Login (Zero Knowledge Proof)")
     print("0 - Exit")
     print("=============================================")
     

@@ -6,6 +6,8 @@ from Crypto.Cipher        import AES
 from base64               import b64decode
 from Crypto.Util.Padding  import unpad
 from src.chap             import Chap
+from src.zeroKnowledgeProtocol import ZeroKnowledgeProtocol
+import random
 
 class ClientHandler:
   # == Methods ==
@@ -40,7 +42,10 @@ class ClientHandler:
       7: self.showFriendsList,
       8: self.removeFriend,
       9: self.logout,
-      10: self.showFriendsListOnline
+      10: self.showFriendsListOnline,
+      11: self.exchangePreParametersSchnorr,
+      12: self.autenticationSchnorr1,
+      13: self.autenticationSchnorr2
     }
     self.con                      = con
     self.cur                      = cur
@@ -51,6 +56,10 @@ class ClientHandler:
     self.clientAndUsernames       = clientAndUsernames
     self.keyClientAndUsernames    = keyClientAndUsernames
     self.msgClientAndUsernames    = msgClientAndUsernames
+    self.zero                     = ZeroKnowledgeProtocol()
+    self.public_key_client        = None
+    self.x                        = None
+    self.e                        = None
 
   def process(self,option,args = None):
     """Process an option received by the client and call the appropriate client handler method.
@@ -348,6 +357,72 @@ class ClientHandler:
     """
     res = self.cur.execute("SELECT chapNonce FROM users WHERE username LIKE ?;",(username,))
     return res.fetchall()[0][0]
+  
+  def exchangePreParametersSchnorr(self,args):
+    try:
+      username = args[0]
+      if not self.isUserAlreadyInDB(username):
+        return {'code': 1,'args': f"{username} is not yet registered in our database. Register instead, it is easy and secure!"}
+      
+      # Set security parameter t - as the number of bits longer will be the calculation of sucessive prime numbers P and Q
+      self.zero.t = 7
+      # Calculate prime numbers P and Q
+      self.zero.Q = self.zero.calculate_Q(pow(2,2*self.zero.t))
+      self.zero.P = self.zero.calculate_P(self.zero.Q)
+      # Generate the generator B	
+      self.zero.B = self.zero.generate_B()
+      return {'code': 0,'args': (self.zero.Q,self.zero.P,self.zero.B)}
+    except Exception as e:
+      print("Error: ", e)
+      return {'code': 1,'args': "An unknown error occurred."}
+    
+  def autenticationSchnorr1(self,args):
+    try:
+      # Receive public key from client
+      self.public_key_client = int(args[0])
+
+      # 3 - Receive number x from client
+      self.x = int(args[1])
+
+      print("Received from client - public key: ", self.public_key_client)
+      print("Received from client - number: ", self.x)
+
+      # 4 - Generates random number e and sends it to the client 
+      self.e = random.randint(0,pow(2,self.zero.t) - 1)
+      print('Sending to client - e:', self.e)
+      return {'code': 0,'args': self.e}
+
+    except Exception as err:
+      return {'code': 1,'args': "An unknown error occurred."}
+    
+  def autenticationSchnorr2(self,args):
+    try:
+        # 7 - Receives the response from the client and calculates a z value
+        y = int(args)
+        print('Received from client - y:', y)
+
+        z = (pow(int(self.zero.B),y) * pow(self.public_key_client,self.e)) % self.zero.P
+
+        print("--------------------")
+        print('Calculated z:', z)
+        print('Number sent by Alice :', self.x)
+        print("--------------------")
+
+        # 8 - Verifies if the z value is equal to the public key X
+        # If it is, then the client (Alice) is authenticated
+        # Else, the client (Alice) is not authenticated
+        # z = β**(a*e+r) * ((β**(−a))**e) mod P = β**r mod P = x
+        if z == self.x:
+          print("SUCCESS: authenticated!")
+          return {'code': 0,'args': "Authentication successful."}
+        else:
+          print("UNSUCCESS: not authenticated!")
+          return {'code': 1,'args': "Authentication failed."}
+    except Exception as err:
+      print(err)
+      return {'code': 1,'args': "An unknown error occurred."}
+
+
   
   def addFriend(self,args):
     """Add friend to the friend's list in the database.

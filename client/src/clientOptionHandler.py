@@ -66,6 +66,8 @@ class ClientOptionHandler:
         self.chapRegister()
       elif option == 2:
         self.chapLogin()
+      elif option == 3:
+        self.schnorrLogin()
     elif self.menuHandler.currMenu == Menu.MENUS.MAIN:
       if option == 1:
         self.menuHandler.currMenu = Menu.MENUS.FRIEND
@@ -157,7 +159,66 @@ class ClientOptionHandler:
       print(optionArgs["args"])
       self.menuHandler.currMenu = Menu.MENUS.MAIN
       self.username[0] = username
+
+  def schnorrLogin(self):
+    username = input("Username: (0 to exit) ")
+    if username == "0":
+      return
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(11,(username,))))
+    optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
+    while optionArgs["code"] == 1:
+      print(optionArgs["args"])
+      username = input("Username: (0 to exit) ")
+      if username == "0":
+        return
+      self.mainSocket[0].send(pickle.dumps(OptionArgs(2,(username,))))
+      optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
+
+    Q = int(optionArgs["args"][0])
+    P = int(optionArgs["args"][1])
+    B = int(optionArgs["args"][2])
+    print("Q, P, B : ", optionArgs["args"][0], "|", optionArgs["args"][1], "|", optionArgs["args"][2])
   
+    # Pre-condition
+    # Client chooses a private key randomly 
+    # a ← {0,...,Q − 1}
+    x = random.randint(0,Q-1)
+    print('Private key:', x)
+
+    # Pre-condition
+    # Client calculates the public key X using the generator B and a random number a and sends it to the server (Bob)
+    # v = β**(−a) mod P
+    public_key = pow(int(B), -x, P)
+    print('Sending to server - pk:', public_key)
+    #self.mainSocket[0].send(pickle.dumps(OptionArgs(12,(public_key,))))
+
+    # 1 - Client chooses a random number r and calculates a number to send to the server 
+    # r ← {0, ..., Q − 1}, x = β**r mod P
+    r = random.randint(0,Q-1)
+    print('Random number:', r)
+    x_send = int(pow(int(B),r,P))
+
+    # 2 - Client (Alice) sends the number x to the server 
+    print('Sending to server - number:', x_send)
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(12,(public_key,x_send))))
+
+    # 5 - Receives random number e from the server and calculates the response
+    optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
+    e = int(optionArgs["args"])
+    print('Received from server - e:', e)
+    y = ((x * e) + r) % Q
+
+    # 6 - Sends the response to the server 
+    print('Sending to server - y:', y)
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(13,(y))))
+
+    if optionArgs["code"] == 1:
+      print(optionArgs["args"])
+    elif optionArgs["code"] == 0:
+      print(optionArgs["args"])
+      self.menuHandler.currMenu = Menu.MENUS.MAIN
+      self.username[0] = username
+    
   def addFriend(self):
     """Adds a friend."""
     friend = input("Friend Username: (0 to exit) ")
