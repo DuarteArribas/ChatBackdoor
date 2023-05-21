@@ -8,6 +8,8 @@ from Crypto.Util.Padding  import unpad
 from src.chap             import Chap
 from src.zeroKnowledgeProtocol import ZeroKnowledgeProtocol
 import random
+import os
+import scrypt
 
 class ClientHandler:
   # == Methods ==
@@ -48,7 +50,8 @@ class ClientHandler:
       13: self.registerSchnorr2,
       14: self.loginSchnorr1,
       15: self.loginSchnorr2,
-      16: self.loginSchnorr3
+      16: self.loginSchnorr3,
+      17: self.getUserSalt
     }
     self.con                      = con
     self.cur                      = cur
@@ -254,8 +257,14 @@ class ClientHandler:
     username: str
       The username of the user to save the secret
     """
-    self.cur.execute("UPDATE users SET password = ?, temp = ? WHERE username LIKE ?;",(secret,0,username))
-    self.con.commit()
+    try:
+      salt     = os.urandom(69).decode("latin-1")
+      pepper = '\x9a6k\xdc)\x80b:@\t\xabm\x80\x93\x8e\xabf7>~\xda(\x92\xc7I\xfe\x0ew\xb3\xc7|\x05\x98s\xb4\x07\x8a\xe0\xec\xf4\x11\xfcDp\xfc\xaflGB3r#\xb6\xd3\xa9\x86l\xech\x7fh\xe5WJ=`\xd5Qh'
+      print("a",scrypt.hash(secret,salt + pepper))
+      self.cur.execute("UPDATE users SET password = ?,salt = ?, temp = ? WHERE username LIKE ?;",(scrypt.hash(secret,salt + pepper).decode("latin-1"),salt,0,username))
+      self.con.commit()
+    except Exception as e:
+      print(e)
   
   def loginChap1(self,args):
     """Authenticate client in the login process.
@@ -816,5 +825,30 @@ class ClientHandler:
       if username in self.connectedUsernames:
         self.connectedUsernames.remove(username)
       return {'code': 0,'args': "Logged out."}
+    except Exception as e:
+      return {'code': 1,'args': "An unknown error occurred."}
+  
+  def getUserSalt(self,args):
+    """Get user's salt from the database.
+    
+    Parameters
+    ----------
+    args : tuple
+      args[0] = username of current user
+    
+    Return
+    ----------
+    dict
+      code : int
+        0 if successful
+        1 if unsuccessful
+      args : str
+        salt if successful
+        exception message if unsuccessful
+    """
+    try:
+      username = args[0]
+      res = self.cur.execute("SELECT salt FROM users WHERE username LIKE ?;",(username,))
+      return {'code': 0,'args': res.fetchall()[0][0]}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}

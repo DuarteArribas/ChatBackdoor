@@ -18,6 +18,7 @@ import os
 import os.path
 from sympy import isprime
 import random
+import scrypt
 
 class ClientOptionHandler:
   """
@@ -158,6 +159,13 @@ class ClientOptionHandler:
     password = input("Password: (0 to exit) ")
     if password == "0":
       return
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(17,(username,))))
+    optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
+    if optionArgs["code"] == 1:
+      print(optionArgs["args"])
+      return
+    pepper = '\x9a6k\xdc)\x80b:@\t\xabm\x80\x93\x8e\xabf7>~\xda(\x92\xc7I\xfe\x0ew\xb3\xc7|\x05\x98s\xb4\x07\x8a\xe0\xec\xf4\x11\xfcDp\xfc\xaflGB3r#\xb6\xd3\xa9\x86l\xech\x7fh\xe5WJ=`\xd5Qh'
+    password = scrypt.hash(password,optionArgs["args"] + pepper).decode("latin-1")
     challenge = Chap.getChapChallenge(nonce,password)
     self.mainSocket[0].send(pickle.dumps(OptionArgs(3,(
       username,
