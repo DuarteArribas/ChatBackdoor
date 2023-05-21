@@ -300,7 +300,7 @@ class ClientOptionHandler:
       return
     if not self.generatePublicKeys(friendToChat,"RSASignatureKeys","RSA"):
       return
-    print(f"You can now start chatting with your friend {friendToChat}.")
+    self.printHistoricalMessages(friendToChat,100)
     msg = input("> ")
     while msg != "/0":
       cipherKey,hmacKey,params = self.getKeys(friendToChat)
@@ -318,6 +318,7 @@ class ClientOptionHandler:
         p
       )
       self.msgSocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,cipherText,iv,hmac,n,e,rsaSig))))
+      print("\033[A                             \033[A")
       self.printUserInput(msg)
       msg = input("> ")
     self.currChattingFriend[0] = None
@@ -409,8 +410,10 @@ class ClientOptionHandler:
           return (cipherKey,hmacKey,(p,q,e,d,n))
       
   def printUserInput(self,msg):
-    print("\033[A                             \033[A")
     print(f"{{{self.username[0]}}} : {msg}")
+  
+  def printFriendInput(self,friendToChat,msg):
+    print(f"\t\t\t{msg} : {{{friendToChat}}}")
     
   def generateRSAKeypair(self):
     p = self.generatePrimeNumber()
@@ -438,3 +441,20 @@ class ClientOptionHandler:
     if d < 0:
       d += phi_N
     return d
+  
+  def printHistoricalMessages(self,friendToChat,maxMessages):
+    self.msgSocket[0].send(pickle.dumps(OptionArgs(1,(self.username[0],friendToChat,maxMessages))))
+    optionArgs = pickle.loads(self.msgSocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
+    if optionArgs["code"] == 1:
+      print(optionArgs["args"])
+      return
+    else:
+      print(f"===== Loading chat with {friendToChat} =====")
+      msg = optionArgs["args"]
+      msg = msg.reverse()
+      for msg in optionArgs["args"]:
+        if msg[0] == self.username[0]:
+          self.printUserInput(msg[1])
+        else:
+          self.printFriendInput(msg[0],msg[1])
+      print("==============================")

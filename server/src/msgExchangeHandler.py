@@ -29,7 +29,8 @@ class MsgExchangeHandler:
       The list of clients for key exchange and respective usernames
     """
     self.MSG_HANDLER_METHOD = {
-      0: self.handleNewMessage
+      0: self.handleNewMessage,
+      1: self.getHistoricalMessages
     }
     self.con                   = con
     self.cur                   = cur
@@ -156,3 +157,32 @@ class MsgExchangeHandler:
     if d < 0:
       d += phi_N
     return d
+  
+  def getHistoricalMessages(self,args):
+    """Get historical messages from the database. 
+    
+    Parameters
+    ----------
+    args : tuple
+      args[0] = username of current user
+      args[1] = friendUsername
+    
+    Return
+    ----------
+    dict
+      code : int
+        0 if successful
+        1 if unsuccessful
+      args : str
+        confirmation of logout if successful
+        exception message if unsuccessful
+    """
+    try:
+      username       = args[0]
+      friendUsername = args[1]
+      maxMessages    = args[2]
+      self.cur.execute("SELECT username1,message FROM messages WHERE (username1 = ? AND username2 = ?) OR (username1 = ? AND username2 = ?) ORDER BY ID DESC LIMIT ?;",(username,friendUsername,friendUsername,username,maxMessages))
+      messages = self.cur.fetchall()
+      return {'code': 0,'args': messages}
+    except Exception as e:
+      return {'code': 1,'args': "An unknown error occurred."}

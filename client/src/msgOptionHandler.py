@@ -66,9 +66,9 @@ class MsgOptionHandler:
               print(friendUsername)
               if self.menuHandler.currMenu == Menu.MENUS.CHAT and self.currChattingFriend[0] == friendUsername:
                 if hmac == self.calculateMsgHmac(cipherText,hmacKey) and self.verifyRSADigitalSignature(cipherText,rsaSig,rsaPublicKey):
-                  print(f"\t\t{friendUsername}: {message} (✓)")
+                  self.printFriendInput(friendUsername,message + " (✓)")
                 else:
-                  print(f"\t\t{friendUsername}: {message} (✖)")
+                  self.printFriendInput(friendUsername,message + " (✖)")
       except Exception as e:
         print(e)
   
@@ -89,3 +89,6 @@ class MsgOptionHandler:
       return True
     except (ValueError,TypeError):
       return False
+  
+  def printFriendInput(self,friendToChat,msg):
+    print(f"\t\t\t{msg} : {{{friendToChat}}}")
