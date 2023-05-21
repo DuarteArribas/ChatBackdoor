@@ -52,7 +52,7 @@ class MsgOptionHandler:
           hmac              = optionArgs["args"][4]
           N                 = optionArgs["args"][5]
           e                 = optionArgs["args"][6]
-          rsaPublicKey = RSA.construct((N,e)).publickey()
+          rsaPublicKey      = RSA.construct((N,e))
           rsaSig            = optionArgs["args"][7]
           elgamalSig        = optionArgs["args"][8]
           clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{username}-{self.username[0]}")
@@ -61,7 +61,7 @@ class MsgOptionHandler:
             with open(os.path.join(clientKeysPath,"AESHmacKeys"),"r") as f2:
               hmacKey = f2.read().encode("utf-8")
               message = self.decipherMsg(cipherText,cipherKey,iv)
-              if hmac == self.calculateMsgHmac(cipherText,hmacKey) and self.verifyRSADigitalSignature(message.encode("utf-8"),rsaSig,rsaPublicKey):
+              if hmac == self.calculateMsgHmac(cipherText,hmacKey) and self.verifyRSADigitalSignature(cipherText,rsaSig,rsaPublicKey):
                 print(f"\t\t{username}: {message} (✓)")
               else:
                 print(f"\t\t{username}: {message} (✖)")

@@ -86,13 +86,13 @@ class MsgExchangeHandler:
       cipherAndHmacKeys = self.decipherMsg(iv,self.ivKey,self.iv).decode("utf-8")
       cipherKey         = cipherAndHmacKeys.split(":")[2][:int(cipherAndHmacKeys.split(":")[0])]
       hmacKey           = cipherAndHmacKeys.split(":")[2][int(cipherAndHmacKeys.split(":")[0]):int(cipherAndHmacKeys.split(":")[1])]
-      p                 = cipherAndHmacKeys.split(":")[2][int(cipherAndHmacKeys.split(":")[1]):]
+      p                 = int(cipherAndHmacKeys.split(":")[2][int(cipherAndHmacKeys.split(":")[1]):])
       cipherKey         = cipherKey.encode("utf-8")
       hmacKey           = hmacKey.encode("utf-8")
       hmac              = args[4]
       N                 = args[5]
       e                 = args[6]
-      q                 = N / p
+      q                 = N // p
       d                 = self.calculateDFromParams(p,q,e)
       rsaPrivateKey     = RSA.construct((N,e,d,p,q))
       rsaSig            = args[7]

@@ -302,10 +302,12 @@ class ClientOptionHandler:
     print(f"You can now start chatting with your friend {friendToChat}.")
     msg = input("> ")
     while msg != "/0":
-      cipherKey,hmacKey,(p,q,e,d,N),elgamalPrivateKey = self.getKeys(friendToChat)
+      cipherKey,hmacKey,params,elgamalPrivateKey = self.getKeys(friendToChat)
+      p,q,e,d,n = params
+      n = int(n)
       cipherKey     = cipherKey.encode("utf-8")
       hmacKey       = hmacKey.encode("utf-8")
-      rsaPrivateKey = RSA.construct((N,e,d,p,q))
+      rsaPrivateKey = RSA.construct((n,e,d,p,q))
       msgBytes      = msg.encode("utf-8")
       cipherText,iv,hmac,rsaSig,elgamalSig = self.processMsg(
         msgBytes,
@@ -315,7 +317,7 @@ class ClientOptionHandler:
         elgamalPrivateKey,
         p
       )
-      self.msgSocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,cipherText,iv,hmac,N,e,rsaSig,elgamalSig))))
+      self.msgSocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,cipherText,iv,hmac,n,e,rsaSig,elgamalSig))))
       self.printUserInput(msg)
       msg = input("> ")
   
@@ -418,8 +420,8 @@ class ClientOptionHandler:
           q = int(lines[1].split("=")[1])
           e = int(lines[2].split("=")[1])
           d = int(lines[3].split("=")[1])
-          N = int(lines[4].split("=")[1])
-          return (cipherKey,hmacKey,(p,q,e,d,N),b"arroz") #TODO: Change this
+          n = lines[4].split("=")[1]
+          return (cipherKey,hmacKey,(p,q,e,d,n),b"arroz") #TODO: Change this
       
   def printUserInput(self,msg):
     print("\033[A                             \033[A")
@@ -435,7 +437,7 @@ class ClientOptionHandler:
 
   def generatePrimeNumber(self):
     while True:
-      num = random.randint(10**307,10**308)
+      num = random.randint(10**250,10**251)
       if isprime(num):
         return num
 

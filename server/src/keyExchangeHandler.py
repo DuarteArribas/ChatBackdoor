@@ -19,7 +19,6 @@ class KeyExchangeHandler:
     self.KEY_HANDLER_METHOD = {
       0: self.exchangeKeys1,
       1: self.exchangeKeys2,
-      2: self.exchangeRSAKeys,
       3: self.exchangeElGamalKeys,
       4: self.exchangePublic
     }
