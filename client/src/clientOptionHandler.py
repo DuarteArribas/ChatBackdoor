@@ -265,7 +265,7 @@ class ClientOptionHandler:
 
     # 6 - Sends the response to the server 
     print('Sending to server - y:', y)
-    self.mainSocket[0].send(pickle.dumps(OptionArgs(16,(username,y))))
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(16,(username,y,str(self.mainSocket[0]),str(self.keySocket[0]),str(self.msgSocket[0])))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
       print("aa",optionArgs["args"])

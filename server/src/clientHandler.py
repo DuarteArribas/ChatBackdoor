@@ -528,6 +528,9 @@ class ClientHandler:
         # 7 - Receives the response from the client and calculates a z value
         username = args[0]
         y = args[1]
+        mainSocket = args[2]
+        keySocket  = args[3]
+        msgSocket  = args[4]
         print('Received from client - y:', y)
         P,B,e,publicKey,x = self.getSchnorrParameters2(username)
         z = (pow(B,y) * pow(publicKey,e)) % P
@@ -541,6 +544,16 @@ class ClientHandler:
         # Else, the client (Alice) is not authenticated
         # z = β**(a*e+r) * ((β**(−a))**e) mod P = β**r mod P = x
         if z == x:
+          self.connectedUsernames.append(username)
+          for client in self.listOfClients:
+            if str(client) == mainSocket:
+              self.clientAndUsernames.append((client,username))
+          for client in self.listOfKeyExchangeClients:
+            if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(keySocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
+              self.keyClientAndUsernames.append((client,username))
+          for client in self.listOfMsgExchangeClients:
+            if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(msgSocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
+              self.msgClientAndUsernames.append((client,username))
           print("SUCCESS: authenticated!")
           return {'code': 0,'args': "Authentication successful."}
         else:
