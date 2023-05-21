@@ -565,6 +565,8 @@ class ClientHandler:
     """
     try:
       username,friendUsername = args[0],args[1]
+      if username == friendUsername:
+        return {'code': 1,'args': "Are you that desperate? 🥲"}
       if not self.isUserLoggedInDB(friendUsername):
         return {'code': 1,'args': "User does not exist."}
       if self.isFriendRequested(username,friendUsername):
