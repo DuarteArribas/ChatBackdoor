@@ -100,18 +100,15 @@ sequenceDiagram
         C ->> C: gera hash da palavra-passe + nonce + pepper  
         C ->> C: gera o desafio do CHAP com o nonce e o hash calculado.
         C ->> S: nome de utilizador, desafio
-        S ->> S: loginChap2
-
-
+        S ->> D: envia query de pesquisa do nonce e segredo através do username
+        D ->> D: executa a query
+        D ->> S: retorna segredo e nonce
+        S ->> S: calcula o desafio com os dados da BD
+        note right of S: desafio diferente == palavra passe incorreta
+        S ->> C: volta a pedir palavra-passe
     end
     note right of D: palavra-passe incorreta
-    S ->> C: responde com o pedido de credenciais (palavra-passe)
-    C ->> S: envia a sua palavra-passe.
-    S ->> S: Veri
-
-    
-
-
+    S ->> C: autenticação com sucesso, apresenta menus
 
     
 ```
