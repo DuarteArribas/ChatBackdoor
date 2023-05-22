@@ -43,7 +43,7 @@ sequenceDiagram
         S ->> S: decifra a palavra-passe cifrada do utilizador
         S ->> D: envia a palavra-passe e a chave privada do utilizador
         D ->> D: armazena o nome de utilizador e a palavra-passe <br> e retira o estatuto temporário do utilizador
-    
+
     %% ZKP
     else Protocolo de Conhecimento Zero (Schnorr)
         S ->> S: define o parâmetro t <br> calcula números primos P e Q <br> gera o gerador B
@@ -58,11 +58,11 @@ sequenceDiagram
     S ->> C: regista o utilizador
 ```
 
-* O servidor inicializa três threads: principal, chaves, mensagens. Assim será possível a cada utilizador usar o chat com vários utilizadores simultaneamente.
+- O servidor inicializa três threads: principal, chaves, mensagens. Assim será possível a cada utilizador usar o chat com vários utilizadores simultaneamente.
 
 ---
 
-### Diagrama de *Login*
+### Diagrama de _Login_
 
 ```mermaid
 sequenceDiagram
@@ -89,28 +89,52 @@ sequenceDiagram
     S ->> S: guarda o nome de utilizador
     S ->> S: verifica o tipo de login associado (CHAP ou Schnorr)
     S ->> C: responde com o pedido de credenciais (palavra-passe)
-    
-    
+
+
     loop verificação da palavra-passe
-        C ->> S: envia uma palavra-passe
-        S ->> S: gera um Nonce (random 128)
-        S ->> D: envia o Nonce gerado 
-        D ->> D: guarda o nonce
-        S ->> C: envia o Nonce
-        C ->> C: gera hash da palavra-passe + nonce + pepper  
-        C ->> C: gera o desafio do CHAP com o nonce e o hash calculado.
-        C ->> S: nome de utilizador, desafio
-        S ->> D: envia query de pesquisa do nonce e segredo através do username
-        D ->> D: executa a query
-        D ->> S: retorna segredo e nonce
-        S ->> S: calcula o desafio com os dados da BD
-        note right of S: desafio diferente == palavra passe incorreta
+        alt Challenge Handshake Authentication Protocol
+            C ->> S: envia a sua palavra-passe
+            S ->> S: gera um Nonce (random 128)
+            S ->> D: envia o Nonce gerado
+            D ->> D: guarda o nonce
+            S ->> C: envia o Nonce
+            C ->> C: gera hash da palavra-passe + nonce + pepper
+            C ->> C: gera o desafio do CHAP com o nonce e o hash calculado.
+            C ->> S: nome de utilizador, desafio
+            S ->> D: envia query de pesquisa do nonce e segredo através do username
+            D ->> D: executa a query
+            D ->> S: retorna segredo e nonce
+            S ->> S: calcula o desafio com os dados da BD
+            note right of S: desafio diferente == palavra passe incorreta
+
+
+
+        else Protocolo de Conhecimento Zero (Schnorr)
+            C ->> S: envia a sua palavra-passe
+            S ->> D: envia query de pesquisa pelos parâmetros P, Q e B <br> do protocolo baseado com o nome de utilizador.
+            D ->> S: envia P,Q e B
+            S ->> C: envia P,Q e B
+            C ->> C: calcula número aleatório (R)
+            C ->> C: com R, B e P calcula e um número <br> para enviar para o servidor (X)
+            C ->> S: envia X
+            S ->> S: gera número aleatório (E)
+            S ->> D: envia nome de utilizador, X, E
+            D ->> D: guarda X, E
+            S ->> C: envia E
+            C ->> C: calcula a resposta (Y) com a chave privada
+            C ->> S: envia Y
+            S ->> D: envia query de pesquisa pelos parâmetros <br> P,B,E,X e chave pública
+            D ->> S: envia P,B,E,X e chave pública
+            S ->> S: calcula Z
+            note right of S: Z != X significa palavra passe incorreta
+        end
+
         S ->> C: volta a pedir palavra-passe
     end
     note right of D: palavra-passe incorreta
     S ->> C: autenticação com sucesso, apresenta menus
 
-    
+
 ```
 
-* O servidor inicializa três threads: principal, chaves, mensagens. Assim será possível a cada utilizador usar o chat com vários utilizadores simultaneamente.
+- O servidor inicializa três threads: principal, chaves, mensagens. Assim, será possível a cada utilizador usar o chat com vários utilizadores simultaneamente.
