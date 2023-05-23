@@ -155,7 +155,6 @@ class ClientHandler:
     dA : int
       Client's "private" key
     """
-    print("bb")
     self.cur.execute("INSERT INTO users (username,dA,temp) VALUES (?,?,?);",(username,str(dA),1))
     self.con.commit()
   
@@ -397,17 +396,18 @@ class ClientHandler:
     try:
       # Set security parameter t - as the number of bits longer will be the calculation of sucessive prime numbers P and Q
       username = args[0]
+      self.removeTempUsers(username)
+      if self.isUserAlreadyInDB(username,"Schnorr"):
+        return {'code': 1,'args': "User already exists."}
       t = self.default_t = 7
       # Calculate prime numbers P and Q
       Q = self.zero.calculate_Q(pow(2,2*t))
-      print(type(Q))
       P = self.zero.calculate_P(Q)
       # Generate the generator B	
       B = self.zero.generate_B(P,Q)
       self.saveUserInDB2(username,t,P,Q,B)
       return {'code': 0,'args': (Q,P,B,t)}
     except Exception as e:
-      print("Errorcucu: ", e)
       return {'code': 1,'args': "An unknown error occurred."}
   
   def saveUserInDB2(self,username,t,P,Q,B):
@@ -420,7 +420,6 @@ class ClientHandler:
     t : int
       Security parameter
     """
-    print("aa")
     self.cur.execute("INSERT INTO users (username,t,P,Q,B,temp) VALUES (?,?,?,?,?,?);",(username,t,P,Q,B,1))
     self.con.commit()
   
@@ -431,7 +430,6 @@ class ClientHandler:
       self.saveUserPublicKey(username,publicKey)
       return {'code': 0,'args': "User registered successfully."}
     except Exception as e:
-      print("Error: ", e)
       return {'code': 1,'args': "An unknown error occurred. User not registered."}
   
   def saveUserPublicKey(self,username,publicKey):
@@ -450,6 +448,8 @@ class ClientHandler:
   def loginSchnorr1(self,args):
     try:
       username = args[0]
+      if not self.isUserAlreadyInDB(username,"Shnorr"):
+        return {'code': 1,'args': f"{username} is not yet registered in our database. Register instead, it is easy and secure!"}
       return {'code': 0,'args': self.getSchnorrParameters(username)}
     except Exception as e:
       print("Error: ", e)
@@ -830,11 +830,6 @@ class ClientHandler:
       mainSocket = args[1]
       keySocket  = args[2]
       msgSocket  = args[3]
-      print("ConnectedUsernames: ",self.connectedUsernames)
-      print("ListOfKeyExchangeClients: ",self.listOfKeyExchangeClients)
-      print("ListOfMsgExchangeClients: ",self.listOfMsgExchangeClients)
-      print("keyClientAndUsernames: ",self.keyClientAndUsernames)
-      print("msgClientAndUsernames: ",self.msgClientAndUsernames)
       if username in self.connectedUsernames:
         self.connectedUsernames.remove(username)
       print("1")
@@ -845,11 +840,6 @@ class ClientHandler:
       for client in self.listOfMsgExchangeClients:
         if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(msgSocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
           self.msgClientAndUsernames.remove((client,username))
-      print("ConnectedUsernames: ",self.connectedUsernames)
-      print("ListOfKeyExchangeClients: ",self.listOfKeyExchangeClients)
-      print("ListOfMsgExchangeClients: ",self.listOfMsgExchangeClients)
-      print("keyClientAndUsernames: ",self.keyClientAndUsernames)
-      print("msgClientAndUsernames: ",self.msgClientAndUsernames)
       return {'code': 0,'args': "Logged out."}
     except Exception as e:
       print(e)
