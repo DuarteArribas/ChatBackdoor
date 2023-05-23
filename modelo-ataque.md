@@ -1,0 +1,1 @@
+As sockets não estão protegidas pela Secure Socket Layer, pelo que, como as mensagens não estão a ser cifradas, podem ser vistas por qualquer utilizador que esteja a utilizar um *sniffer* sobre a rede.
