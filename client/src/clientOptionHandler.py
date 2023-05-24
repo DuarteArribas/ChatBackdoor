@@ -253,7 +253,7 @@ class ClientOptionHandler:
       return
     e = optionArgs["args"]
     privateKey = 0
-    path = f"client/out/{username}Keys/AuthenticationKeys/SchnorrPrivateKey"
+    path = f"client/out/{username}Keys/AuthenticationKeys/schnorrPrivateKey"
     if not os.path.exists(path):
       print(f"Could not find private key on path {path}")
     with open(path,"r") as f:
