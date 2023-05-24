@@ -88,14 +88,15 @@ class MsgExchangeHandler:
       newMsg = f.read()
     os.remove(f"server/out/{username}-{friendUsername}-{fileHash}.txt")
     if newMsg != message.decode("utf-8"):
-      print("The original message was changed.")
+      print(f"The original message {message.decode('utf-8')} was changed to {newMsg}.")
     else:
-      print("The original message was not changed.")
+      print(f"The original message {message.decode('utf-8')} was not changed.")
     cipherText = self.cipherMsg(newMsg.encode("utf-8"),cipherKey,iv)
     hmac = self.calculateMsgHmac(cipherText,hmacKey)
     rsaSig = self.calculateRSADigitalSignature(cipherText,rsaPrivateKey)
     self.cur.execute("INSERT INTO messages (username1,username2,message) VALUES (?,?,?);",(username,friendUsername,newMsg))
     self.con.commit()
+    print(f"Message {newMsg} was inserted into the DB as a message from {username} and {friendUsername}.")
     for host,u in self.msgClientAndUsernames:
       if u == friendUsername:
         host.send(pickle.dumps({'code': 2,'args': (username,friendUsername,cipherText,iv,hmac,N,e,rsaSig)}))

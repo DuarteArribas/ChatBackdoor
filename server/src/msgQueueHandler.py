@@ -50,3 +50,4 @@ class MsgQueueHandler:
     e                 = args[6]
     rsaSig            = args[7]
     self.msgQueue.append((username,friendUsername,cipherText,iv,hmac,N,e,rsaSig))
+    print("One more message has arrived!")

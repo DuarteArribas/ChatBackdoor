@@ -82,6 +82,7 @@ class MsgHistoryHandler:
       maxMessages    = args[2]
       self.cur.execute("SELECT username1,message FROM messages WHERE (username1 = ? AND username2 = ?) OR (username1 = ? AND username2 = ?) ORDER BY ID DESC LIMIT ?;",(username,friendUsername,friendUsername,username,maxMessages))
       messages = self.cur.fetchall()
+      print(f"{username} has just asked for the previous messages with {friendUsername}!")
       return {'code': 0,'args': messages}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
