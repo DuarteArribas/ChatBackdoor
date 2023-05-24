@@ -52,7 +52,6 @@ class MsgOptionHandler:
         if readable:
           optionArgs = pickle.loads(self.msgSocket[0].recv(MsgOptionHandler.NUMBER_BYTES_TO_RECEIVE))
           if optionArgs["code"] == 2:
-            print("aaaaaaaaaaaaaaaaaaaaaaa")
             friendUsername    = optionArgs["args"][0]
             username          = optionArgs["args"][1]
             cipherText        = optionArgs["args"][2]
