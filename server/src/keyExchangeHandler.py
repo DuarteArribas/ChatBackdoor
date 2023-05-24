@@ -57,7 +57,7 @@ class KeyExchangeHandler:
       args[2] : int
         The X point of the client's key
       args[3] : str
-        The MAC of the client's key
+        The type of the client's key (AES, HMAC, RSA)
     
     Return
     ----------

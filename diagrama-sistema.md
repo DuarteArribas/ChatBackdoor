@@ -7,13 +7,13 @@ sequenceDiagram
     participant C as Cliente
     participant S as Servidor
     participant D as Base de Dados
-    C -> C: vê menu de registo
+    C ->> C: vê menu de registo
     C ->> C: escolhe método de registo (CHAP / Schnorr)
     
     C ->> S: envia pedido de registo
     S ->> C: envia pedido de credenciais (nome de utilizador)
 
-    %% verificação do nome de utilizador
+    %% Verificação do nome de utilizador
     loop verificação do nome de utilizador
         C ->> S: envia um nome de utilizador
         D ->> D: elimina potenciais nomes de utilizadores temporários
@@ -78,71 +78,76 @@ sequenceDiagram
     participant S as Servidor
     participant D as Base de Dados
 
-    C ->> S: envia pedido de login
-    S ->> C: responde com o pedido de credenciais (nome de utilizador)
+    C ->> C: vê menu de login
+    C ->> C: escolhe método de login (CHAP / Schnorr)
+    C ->> S: incia socket principal \ <br> envia pedido de login
+    S ->> C: envia pedido de credenciais (nome de utilizador)
 
-    loop verificação do nome de utilizador
-    C ->> S: envia um nome de utilizador
-    S ->> D: envia query de pesquisa pelo nome do utilizador
+    loop Verificação do nome de utilizador
+        C ->> S: envia um nome de utilizador
+        S ->> D: envia query de pesquisa pelo nome do utilizador
         D ->> D: verifica se o nome de utilizador já existe
-        note right of D: o nome de utilizador já existe
-        D ->> S: envia a lista de resultados
+        note right of D: o nome de utilizador não existe
+        D ->> S: envia uma lista vazia de resultados
         S ->> C: responde com um novo pedido de credenciais
         C ->> S: envia um novo nome de utilizador
     end
-    note right of D: o nome de utilizador não existe
-    D ->> S: envia uma lista vazia de resultados
+
+    note right of D: o nome de utilizador já existe
+    D ->> S: envia a lista de resultados
     S ->> S: guarda o nome de utilizador
-    S ->> S: verifica o tipo de login associado (CHAP ou Schnorr)
-    S ->> C: responde com o pedido de credenciais (palavra-passe para  <br> CHAP ou nome de utilizador para Schnorr)
+    S ->> S: verifica o tipo de login associado (CHAP / Schnorr)
 
-
-    loop verificação da palavra-passe
-        alt Challenge Handshake Authentication Protocol
+    alt Challenge Handshake Authentication Protocol
+        loop Verificação da palavra-passe
+            S ->> S: gera um nonce (número aleatório de 128 bits)
+            S ->> D: envia o nome de utilizador e o nonce
+            D ->> D: armazena o nonce para o utilizador
+            S ->> C: envia o nonce
+            S ->> C: envia pedido de credenciais (palavra-passe)
             C ->> S: envia a sua palavra-passe
-            S ->> S: gera um Nonce (random 128)
-            S ->> D: envia o Nonce gerado
-            D ->> D: guarda o nonce
-            S ->> C: envia o Nonce
             C ->> C: gera hash da palavra-passe + nonce + pepper
-            C ->> C: gera o desafio do CHAP com o nonce e o hash calculado.
-            C ->> S: nome de utilizador, desafio
+            C ->> C: gera o desafio do CHAP com o nonce e o hash calculado
+            C ->> S: envia nome de utilizador e desafio
+            S ->> D: envia pedido de recuperar o salt
             S ->> D: envia query de pesquisa do nonce e segredo através do username
             D ->> D: executa a query
             D ->> S: retorna segredo e nonce
             S ->> S: calcula o desafio com os dados da BD
             note right of S: desafio diferente == palavra passe incorreta
+            S ->> C: envia novo pedido de credenciais (palavra-passe)
         end
-    end
 
-    note right of D: palavra-passe incorreta
-
-    loop verificação do nome de utilizador
-        alt Protocolo de Conhecimento Zero (Schnorr)
+    else Protocolo de Conhecimento Zero (Schnorr)
+        loop Verificação do nome de utilizador
             C ->> S: envia o nome do utilizador
-            S ->> D: envia query de pesquisa pelos parâmetros P, Q (números primos) e B (gerador) <br> do protocolo baseado no nome de utilizador.
+            S ->> D: envia query de pesquisa pelos parâmetros <br> P, Q (números primos) e B (gerador) <br> do protocolo baseado no nome de utilizador
+            D ->> D: executa a query
             D ->> S: retorna P,Q e B
             S ->> C: envia P,Q e B
-            C ->> C: calcula número aleatório (r)
+            C ->> C: gera número aleatório (r)
             C ->> C: com r, B e P calcula um número (x) <br> para enviar para o servidor
-            C ->> S: envia x
+            C ->> S: envia nome de utilizador e x
             S ->> D: envia query para obtenção do parâmetro t
+            D ->> D: executa a query
             D ->> S: retorna parâmetro t
             S ->> S: gera número aleatório (e)
             S ->> D: envia nome de utilizador, x, e
-            D ->> D: guarda x, e
+            D ->> D: guarda x, e para o nome de utilizador
             S ->> C: envia e
+            C ->> C: busca a chave privada (armazenada localmente)
             C ->> C: calcula a resposta (Y) com a chave privada, e, r e Q
             C ->> S: envia y
             S ->> D: envia query de pesquisa pelos parâmetros <br> P,B,e,x e chave pública do cliente
+            D ->> D: executa query
             D ->> S: retorna P,B,e,x e chave pública do cliente
             S ->> S: calcula z
-            note right of S: z != x significa que cliente não é quem diz ser (não sabe de facto a chave privada)
+            note right of S: z != x significa que cliente não é quem diz ser <br> (não sabe de facto a chave privada)
+            S ->> C: envia novo pedido de credenciais (nome de utilizador)
         end
-        S ->> C: volta a pedir nome de utilizador
     end
-    note right of D: nome de utilizador incorreto
-    S ->> C: autenticação com sucesso, apresenta menus
+    
+    S ->> C: envia mensagem de sucesso
 ```
 
 - O servidor inicializa três threads: principal, chaves, mensagens. Assim, será possível a cada utilizador usar o chat com vários utilizadores simultaneamente.
@@ -157,58 +162,77 @@ sequenceDiagram
     participant D as Base de Dados
 
     C1 ->> S: seleciona amigo para conversar
-    C2 ->> S: seleciona amigo para conversar
+    %% C2 ->> S: seleciona amigo para conversar ->> Acho que isto não é bem assim, CONFIRMAR
     
+    %% onde ao certo se está a fazer a verificação de o user2 estar online?
+
     %% AESCipher Keys
-    alt Troca de chaves de cifra (AES)
-        C1 ->> C1: gera X, dA com curvas elípticas
-        C1 ->> S: envia X, nome de utilizador, <br> nome do amigo, tipo de chave
-        S ->> S: verifica se amigo está online
-        S ->> C2: envia X, nome de utilizador, tipo de chave
-
-
-        
-
-    end
+    note right of C1: Troca de chaves de cifra AES
+    C1 ->> C1: gera valor secreto (dA) e ponto público (X) pelo protocolo <br> Diffie-Hellman sobre curvas elíticas (X = G * dA)
+    C1 ->> S: envia nome de utilizador (próprio), nome de utilizador (amigo) <br>, ponto público X, tipo de chave (AES)
+    S ->> S: verifica se o segundo utilizador está online (pelo nome de utilizador)
+    note right of S: o segundo utilizador não está online
+    S ->> C1: envia mensagem de aviso
+    note right of S: o segundo utilizador está online
+    S ->> C1: NÃO ESTOU A COMPREENDER. keyExchangeHandler, linha 79
+    S ->> C1: envia ponto público Y
+    C1 ->> C1: constrói o ponto chave K(x1, y1) = dA * Y <br> e retira a coordenada x1 para a chave k1
+    C1 ->> C1: armazena localmente a coordenada x1
     
-    %%alt Troca de chave de integridade HMAC (AES ??)
-    %% ?????????
-    %%end
+    %% HMAC Keys
+    note right of C1: Troca de chave de integridade de HMAC
+    C1 ->> C1: gera valor secreto (dA) e ponto público (X) pelo protocolo <br> Diffie-Hellman sobre curvas elíticas (X = G * dA)
+    C1 ->> S: envia nome de utilizador (próprio), nome de utilizador (amigo) <br>, ponto público X, tipo de chave (AES)
+    S ->> S: verifica se o segundo utilizador está online (pelo nome de utilizador)
+    note right of S: o segundo utilizador não está online
+    S ->> C1: envia mensagem de aviso
+    note right of S: o segundo utilizador está online
+    S ->> C1: NÃO ESTOU A COMPREENDER. keyExchangeHandler, linha 79
+    S ->> C1: envia ponto público Y
+    C1 ->> C1: constrói o ponto chave K(x1, y1) = dA * Y <br> e retira a coordenada x1 para a chave k1
+    C1 ->> C1: armazena localmente a coordenada x1
+
+    %% Assinatura digital RSA
+    note right of C1: Geração de chave de assinatura digital (RSA)
+    C1 ->> C1: gera números primos p e q
+    C1 ->> C1: calcula φN = (p - 1) * (q - 1)
+    C1 ->> C1: declara e = 65537
+    C1 ->> C1: calcular d = e ** φN
+    C1 ->> C1: calcula N = p * q
+    C1 ->> C1: armazena localmente p, q, e, d, n
     
-    %%alt Gera chave de assinatura digital (RSA)
-    %% ????????? 
-    %%end
-
-    
-
-
     S ->> D: envia pesquisa por mensagens antigas
     D ->> S: envia mensagens antigas
     S ->> C1: mostra mensagens antigas
-    C1 ->> C1: escreve uma mensagem
-    C1 ->> S: envia mensagem
-    C1 ->> C1: obtém chave de cifra, chave de integridade <br> HMAC, parâmetros para chave assinatura RSA (P Q E D N)  de ficheiros
-    C1 ->> C1: calcula uma string que vai atuar como chave R
-    C1 ->> C1: cifra o IV com R, IVKEY (SÓ DEUS SABE O Q É???????)
-    %%  clientOptionHandler, linha 492. What. The. Fuck. Is. This?
-    C1 ->> C1: cifra a mensagem com a chave de cifra e o IV
-    C1 ->> C1: calcula HMAC com a chave de integridade
-    C1 ->> C1: calcula assinatura digital com a chave privada
-    C1 ->> S: envia nome de utilizador, nome do amigo, criptograma, IV, HMAC, N, E, assinatura RSA
-    %%  msgExchangeHandler, linha 87. What. The. Fuck. Is. This?
-    S ->> S: decifra o IV com IVKEY(SÓ DEUS SABE O Q É???????) <br> e o IV para obter a chave de cifra, <br> a chave de integridade HMAC e P (AQUI NAO SEI SE É P, MAS PRONTO)
-    S ->> S: calcula Q (N // P)
-    S ->> S: ataque de força bruta para re-descobrir D
-    S ->> S: gera chave privada de assinatura digital com N, E, D, P, Q
-    S ->> S: decifra criptograma com chave e IV
-    S ->> S: guarda texto-limpo num ficheiro
-    S ->> S: espera 15 segundos
-    
 
-    S ->> S: volta a cifrar o texto-limpo, HMAC e assinatura digital
-    S ->> D: envia texto-limpo da mensagem, nome de utilizador, nome do amigo
-    D ->> D: armazena mensagem
-    S ->> C2: envia nome de utilizador, nome do amigo, criptograma, IV, HMAC, N, E, e assinatura digital
+    loop Troca de mensagens
+        C1 ->> C1: escreve uma mensagem
+        C1 ->> C1: busca a chave de cifra AES, <br> a chave de integridade HMAC <br> e parâmetros de assinatura digital RSA <br> (p, q, e, d, n, armazenados localmente)
+        C1 ->> C1: cifra as chaves de cifra e de HMAC (KEY para simplificação)
+        C1 ->> C1: cifra o vetor de inicialização (iv) com <br> KEY e ivKey (parâmetro do sistema)
+        C1 ->> C1: cifra a mensagem com a chave de cifra <br> e o vetor de inicialização (iv)
+        %%  clientOptionHandler, linha 488 ou perto. HELP.
+        C1 ->> C1: calcula o HMAC da mensagem cifrada
+        C1 ->> C1: calcula a assinatura digital da mensagem cifrada <br> com a chave privada RSA
+        C1 ->> S: envia nome de utilizador (próprio), nome de utilizador do segundo cliente, <br> mensagem cifrada, vetor de inicialização (iv), HMAC, <br> n, e, assinatura digital
+
+        S ->> S: decifra KEY com ivKey (parâmetro do sistema) <br> e vetor de inicialização (iv)
+        S ->> S: obtém a chave de cifra, a chave de HMAC e p <br> ao dividir a KEY
+        S ->> S: calcula q = N / p
+        S ->> S: faz ataque de força bruta para descobrir d
+        S ->> S: constrói a chave privada RSA com N, e, d, p, q
+        S ->> S: decifra a mensagem cifrada com a chave de cifra <br> e o vetor de inicialização (iv)
+        S ->> S: guarda texto-limpo num ficheiro
+        S ->> S: espera 15 segundos
+        note right of S: a mensagem pode agora ser alterada
+
+        S ->> S: cifra a mensagem
+        S ->> S: calcula HMAC da mensagem cifrada
+        S ->> S: calcula a assinatura digital da mensagem cifrada
+        S ->> D: envia nome de utilizador (próprio), nome de <br> utilizador (amigo) e mensagem não cifrada
+        D ->> D: armazena a mensagem
+        S ->> C2: envia nome de utilizador inicial, nome do amigo, <br> criptograma, iv, HMAC, N, e, assinatura digital
+    end
 
 ```
 - A troca de chaves é feita a cada início de chat com outro utilizador
@@ -227,11 +251,11 @@ sequenceDiagram
     S ->> S: inicia as sockets e threads <br> e fica à escuta de comunicações
     C ->> C: inicia as threads
     C ->> S: inicia os sockets de chaves e de mensagem
-    C -> C: vê menu inicial
+    C ->> C: vê menu inicial
 
     %% registar
     alt Efetuar Registo
-        C -> C: vê menu de registo
+        C ->> C: vê menu de registo
         C ->> S: inicia a socket principal \ <br> pedido para efetuar registo
         S ->> S: aloca uma thread ao cliente
         C -->> S: registo por CHAP
@@ -240,7 +264,7 @@ sequenceDiagram
 
     %% login
     else Efetuar Login
-        C -> C: vê menu de login
+        C ->> C: vê menu de login
         C ->> S: inicia a socket principal \ <br> pedido para efetuar login
         S ->> S: aloca uma thread ao cliente
         C -->> S: login por CHAP
@@ -251,7 +275,7 @@ sequenceDiagram
     else Sair
         C ->> S: terminar sockets de chave e de mensagem
         C ->> C: terminar threads
-        C -> C: terminar o processo
+        C ->> C: terminar o processo
     end
 ```
 
@@ -263,12 +287,12 @@ sequenceDiagram
     participant S as Servidor
     participant D as Base de Dados
 
-    C -> C: vê menu principal
+    C ->> C: vê menu principal
     
     %% menu de amigos
     alt Menu de amigos
         C ->> C: escolhe menu de amigos
-        C -> C: vê menu de amigos
+        C ->> C: vê menu de amigos
         note right of C: ver diagrama de menu de amigos
 
     %% troca de mensagens >> isto é o diagrama acima, right?
@@ -292,7 +316,7 @@ sequenceDiagram
         C ->> S: envia pedido de logout
         S ->> S: remove nome de utilizador da lista de sockets
         S ->> C: envia mensagem de sucesso
-        C -> C: vê menu inicial
+        C ->> C: vê menu inicial
     end
 ```
 
@@ -304,7 +328,7 @@ sequenceDiagram
     participant S as Servidor
     participant D as Base de Dados
 
-    C -> C: vê menu de amigos
+    C ->> C: vê menu de amigos
 
     %% adicionar amigo
     alt Adicionar amigo
@@ -377,6 +401,6 @@ sequenceDiagram
     
     %% sair
     else Sair
-        C -> C: vê menu principal
+        C ->> C: vê menu principal
     end
 ```
