@@ -203,11 +203,8 @@ class ClientOptionHandler:
     Q = optionArgs["args"][0]
     P = optionArgs["args"][1]
     B = optionArgs["args"][2]
-    print("Q, P, B : ", optionArgs["args"][0], "|", optionArgs["args"][1], "|", optionArgs["args"][2])
     privateKey = random.randint(0,Q-1)
-    print('Private key:',privateKey)
     publicKey = pow(B, -privateKey, P)
-    print('Sending to server - pk:',publicKey)
     self.mainSocket[0].send(pickle.dumps(OptionArgs(13,(username,publicKey))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
@@ -244,11 +241,9 @@ class ClientOptionHandler:
     # 1 - Client chooses a random number r and calculates a number to send to the server 
     # r ← {0, ..., Q − 1}, x = β**r mod P
     r = random.randint(0,Q-1)
-    print('Random number:', r)
     x = int(pow(B,r,P))
 
     # 2 - Client (Alice) sends the number x to the server 
-    print('Sending to server - number:', x)
     self.mainSocket[0].send(pickle.dumps(OptionArgs(15,(username,x))))
 
     # 5 - Receives random number e from the server and calculates the response
@@ -257,7 +252,6 @@ class ClientOptionHandler:
       print(optionArgs["args"])
       return
     e = optionArgs["args"]
-    print('Received from server - e:', e)
     privateKey = 0
     path = f"client/out/{username}Keys/AuthenticationKeys/SchnorrPrivateKey"
     if not os.path.exists(path):
@@ -267,13 +261,12 @@ class ClientOptionHandler:
     y = ((privateKey * e) + r) % Q
 
     # 6 - Sends the response to the server 
-    print('Sending to server - y:', y)
     self.mainSocket[0].send(pickle.dumps(OptionArgs(16,(username,y,str(self.mainSocket[0]),str(self.keySocket[0]),str(self.msgSocket[0])))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
-      print("aa",optionArgs["args"])
+      print(optionArgs["args"])
     elif optionArgs["code"] == 0:
-      print("bb",optionArgs["args"])
+      print(optionArgs["args"])
       self.menuHandler.currMenu = Menu.MENUS.MAIN
       self.username[0] = username
     
@@ -413,33 +406,26 @@ class ClientOptionHandler:
     friendToChat : str
       The username of the friend to chat with
     """
-    print("a")
+    print(f"========== Loading chat with {friendToChat} ==========")
     if not self.exchangeKeys(friendToChat,"AESCipherKeys"):
       return
-    print("b")
     if not self.exchangeKeys(friendToChat,"AESHmacKeys"):
       return
-    print("c")
     if not self.generatePublicKeys(friendToChat,"RSASignatureKeys","RSA"):
       return
-    print("d")
     self.printHistoricalMessages(friendToChat,100)
-    print("e")
     msg = input("> ")
+    print("\033[A                             \033[A")
     while msg != "/0":
-      print("1")
       cipherKey,hmacKey,params = self.getKeys(friendToChat)
-      print("2")
       p,q,e,d,n = params
-      print("3")
       n = int(n)
-      print("4")
       cipherKey     = cipherKey.encode("utf-8")
       hmacKey       = hmacKey.encode("utf-8")
-      rsaPrivateKey = RSA.construct((n,e,d,p,q))
-      print("5")
+      print("aaaaaaaaaaaaa")
+      rsaPrivateKey = RSA.construct((119294134840169509055527211331255649644606569661527638012067481954943056851150333806315957037715620297305000118628770846689969112892212245457118060574995989517080042105263427376322274266393116193517839570773505632231596681121927337473973220312512599061231322250945506260066557538238517575390621262940383913963,65537,72892162132453240003793081431254596487759129683932347592859641345891553040333172364830897044041106776409947506759374529741974962628265550289611864072595839380092878908763844906765562034782236695192158256372726552845451322975382692014652804746885831130782746696769480546157553394854115242420454633969276355353,10933766183632575817611517034730668287155799984632223454138745671121273456287670008290843302875521274970245314593222946129064538358581018615539828479146469,10910616967349110231723734078614922645337060882141748968209834225138976011179993394299810159736904468554021708289824396553412180514827996444845438176099727))
+      print("bbbbbbbb")
       msgBytes      = msg.encode("utf-8")
-      print("aa")
       cipherText,iv,hmac,rsaSig = self.processMsg(
         msgBytes,
         cipherKey,
@@ -447,11 +433,10 @@ class ClientOptionHandler:
         rsaPrivateKey,
         p
       )
-      print("bb")
       self.msgSocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,cipherText,iv,hmac,n,e,rsaSig))))
-      #print("\033[A                             \033[A")
       self.printUserInput(msg)
       msg = input("> ")
+      print("\033[A                             \033[A")
     self.currChattingFriend[0] = None
   
   def exchangeKeys(self,friendToChat,keyType):
@@ -466,20 +451,15 @@ class ClientOptionHandler:
     """
     ec   = EllipticCurves()
     X,dA = ec.generateKeys()
-    print("aa")
     self.keySocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,X,keyType))))
     optionArgs = pickle.loads(self.keySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
-    print("bb")
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
       return False
-    print("cc")
     Y = optionArgs["args"][0]
     keyPoint = ec.multiplyPointByScalar(Y,dA)
     key = str(keyPoint[0])
-    print("dd")
     clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}")
-    print("ee")
     if not os.path.exists(clientKeysPath):
       os.makedirs(clientKeysPath)
     with open(os.path.join(clientKeysPath,keyType),"w") as f:
@@ -497,19 +477,13 @@ class ClientOptionHandler:
       The type of key to exchange
     """
     if algorithm == "RSA":
-      print("aaa")
       p,q,e,d = self.generateRSAKeypair()
-      print("bbb")
       N = p * q
-      print("ccc")
       clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}")
-      print("ddd")
       if not os.path.exists(clientKeysPath):
         os.makedirs(clientKeysPath)
-      print("eee")
       with open(os.path.join(clientKeysPath,keyType),"w") as f:
         f.write(f"P={p}\nQ={q}\nE={e}\nD={d}\nN={N}")
-      print("fff")
       return True
   
   def processMsg(self,msgBytes,cipherKey,hmacKey,rsaPrivateKey,p):
@@ -585,15 +559,15 @@ class ClientOptionHandler:
     return d
   
   def printHistoricalMessages(self,friendToChat,maxMessages):
-    print("aaaa")
     self.msgHistorySocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,maxMessages))))
     optionArgs = pickle.loads(self.msgHistorySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
-    print("bbbb")
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
       return
     else:
-      print(f"===== Loading chat with {friendToChat} =====")
+      if len(optionArgs["args"]) == 0:
+        print("No messages to show")
+        return   
       msg = optionArgs["args"]
       msg = msg.reverse()
       for msg in optionArgs["args"]:
@@ -601,4 +575,4 @@ class ClientOptionHandler:
           self.printUserInput(msg[1])
         else:
           self.printFriendInput(msg[0],msg[1])
-      print("==============================")
+      print("========================================")

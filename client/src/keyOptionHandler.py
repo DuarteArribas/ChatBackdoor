@@ -65,4 +65,4 @@ class KeyOptionHandler:
           if self.canBazar[0]:
             exit(0)
       except Exception as e:
-        print(e)
+        pass

@@ -11,8 +11,6 @@ from Crypto.Hash          import HMAC, SHA512
 from Crypto.Signature     import pkcs1_15
 from Crypto.Util.Padding import unpad
 import os
-from queue import Queue
-
 class MsgExchangeHandler:
   # == Methods ==
   def __init__(self,con,cur,connectedUsernames,msgClientAndUsernames,ivKey,iv,msgQueue):
@@ -57,49 +55,52 @@ class MsgExchangeHandler:
         confirmation of logout if successful
         exception message if unsuccessful
     """
-    if len(self.msgQueue) == 0:
-      return
-    args = self.msgQueue.pop(0)
-    username          = args[0]
-    friendUsername    = args[1]
-    cipherText        = args[2]
-    iv                = args[3]
-    cipherAndHmacKeys = self.decipherMsg(iv,self.ivKey,self.iv).decode("utf-8")
-    cipherKey         = cipherAndHmacKeys.split(":")[2][:int(cipherAndHmacKeys.split(":")[0])]
-    hmacKey           = cipherAndHmacKeys.split(":")[2][int(cipherAndHmacKeys.split(":")[0]):int(cipherAndHmacKeys.split(":")[1])]
-    p                 = int(cipherAndHmacKeys.split(":")[2][int(cipherAndHmacKeys.split(":")[1]):])
-    cipherKey         = cipherKey.encode("utf-8")
-    hmacKey           = hmacKey.encode("utf-8")
-    hmac              = args[4]
-    N                 = args[5]
-    e                 = args[6]
-    q                 = N // p
-    d                 = self.calculateDFromParams(p,q,e)
-    rsaPrivateKey     = RSA.construct((N,e,d,p,q))
-    rsaSig            = args[7]
-    message           = self.decipherMsg(cipherText,cipherKey,iv)
-    print(f"{username} just sent a message to {friendUsername}: {message.decode('utf-8')}. 15 seconds to change the message contents before being sent.")
-    fileHash = SHA512.new((username + friendUsername + message.decode("utf-8") + datetime.now().strftime("%d/%m/%Y %H:%M:%S")).encode("utf-8")).hexdigest()
-    with open(f"server/out/{username}-{friendUsername}-{fileHash}.txt","w") as f:
-      f.write(message.decode("utf-8"))
-    time.sleep(15)
-    newMsg = ""
-    with open(f"server/out/{username}-{friendUsername}-{fileHash}.txt","r") as f:
-      newMsg = f.read()
-    os.remove(f"server/out/{username}-{friendUsername}-{fileHash}.txt")
-    if newMsg != message.decode("utf-8"):
-      print(f"The original message {message.decode('utf-8')} was changed to {newMsg}.")
-    else:
-      print(f"The original message {message.decode('utf-8')} was not changed.")
-    cipherText = self.cipherMsg(newMsg.encode("utf-8"),cipherKey,iv)
-    hmac = self.calculateMsgHmac(cipherText,hmacKey)
-    rsaSig = self.calculateRSADigitalSignature(cipherText,rsaPrivateKey)
-    self.cur.execute("INSERT INTO messages (username1,username2,message) VALUES (?,?,?);",(username,friendUsername,newMsg))
-    self.con.commit()
-    print(f"Message {newMsg} was inserted into the DB as a message from {username} and {friendUsername}.")
-    for host,u in self.msgClientAndUsernames:
-      if u == friendUsername:
-        host.send(pickle.dumps({'code': 2,'args': (username,friendUsername,cipherText,iv,hmac,N,e,rsaSig)}))
+    try:
+      if len(self.msgQueue) == 0:
+        return
+      args = self.msgQueue.pop(0)
+      username          = args[0]
+      friendUsername    = args[1]
+      cipherText        = args[2]
+      iv                = args[3]
+      cipherAndHmacKeys = self.decipherMsg(iv,self.ivKey,self.iv).decode("utf-8")
+      cipherKey         = cipherAndHmacKeys.split(":")[2][:int(cipherAndHmacKeys.split(":")[0])]
+      hmacKey           = cipherAndHmacKeys.split(":")[2][int(cipherAndHmacKeys.split(":")[0]):int(cipherAndHmacKeys.split(":")[1])]
+      p                 = int(cipherAndHmacKeys.split(":")[2][int(cipherAndHmacKeys.split(":")[1]):])
+      cipherKey         = cipherKey.encode("utf-8")
+      hmacKey           = hmacKey.encode("utf-8")
+      hmac              = args[4]
+      N                 = args[5]
+      e                 = args[6]
+      q                 = N // p
+      d                 = self.calculateDFromParams(p,q,e)
+      rsaPrivateKey     = RSA.construct((N,e,d,p,q))
+      rsaSig            = args[7]
+      message           = self.decipherMsg(cipherText,cipherKey,iv)
+      print(f"{username} just sent a message to {friendUsername}: {message.decode('utf-8')}. 15 seconds to change the message contents before being sent.")
+      fileHash = SHA512.new((username + friendUsername + message.decode("utf-8") + datetime.now().strftime("%d/%m/%Y %H:%M:%S")).encode("utf-8")).hexdigest()
+      with open(f"server/out/{username}-{friendUsername}-{fileHash}.txt","w") as f:
+        f.write(message.decode("utf-8"))
+      time.sleep(15)
+      newMsg = ""
+      with open(f"server/out/{username}-{friendUsername}-{fileHash}.txt","r") as f:
+        newMsg = f.read()
+      os.remove(f"server/out/{username}-{friendUsername}-{fileHash}.txt")
+      if newMsg != message.decode("utf-8"):
+        print(f"The original message {message.decode('utf-8')} was changed to {newMsg}.")
+      else:
+        print(f"The original message {message.decode('utf-8')} was not changed.")
+      cipherText = self.cipherMsg(newMsg.encode("utf-8"),cipherKey,iv)
+      hmac = self.calculateMsgHmac(cipherText,hmacKey)
+      rsaSig = self.calculateRSADigitalSignature(cipherText,rsaPrivateKey)
+      self.cur.execute("INSERT INTO messages (username1,username2,message) VALUES (?,?,?);",(username,friendUsername,newMsg))
+      self.con.commit()
+      print(f"Message {newMsg} was inserted into the DB as a message from {username} and {friendUsername}.")
+      for host,u in self.msgClientAndUsernames:
+        if u == friendUsername:
+          host.send(pickle.dumps({'code': 2,'args': (username,friendUsername,cipherText,iv,hmac,N,e,rsaSig)}))
+    except Exception as e:
+      pass
     
   def decipherMsg(self,cipherText,cipherKey,iv):
     cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])

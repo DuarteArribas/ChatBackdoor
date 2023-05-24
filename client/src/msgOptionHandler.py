@@ -99,4 +99,4 @@ class MsgOptionHandler:
   def printFriendInput(self,friendToChat,msg):
     #print("\033[A                             \033[A")
     print(f"\t\t\t{msg} : {{{friendToChat}}}")
-    print("> ",end="")
+    print("> ")
