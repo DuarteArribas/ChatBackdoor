@@ -138,4 +138,5 @@ class ChatClient:
       else:
         self.msgHistorySocket[0] = s4
       while True:
-        pass
+        if self.canBazar[0]:
+          exit(0)
