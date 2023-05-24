@@ -4,7 +4,6 @@ from src.menu import *
 import signal,sys
 
 def main():
- 
   # Read configuration from config file
   cfg = ConfigParser()
   cfg.read("client/config/clientconf.cfg")
