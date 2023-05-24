@@ -18,9 +18,7 @@ class KeyExchangeHandler:
     """
     self.KEY_HANDLER_METHOD = {
       0: self.exchangeKeys1,
-      1: self.exchangeKeys2,
-      3: self.exchangeElGamalKeys,
-      4: self.exchangePublic
+      1: self.exchangeKeys2
     }
     self.con                   = con
     self.cur                   = cur
@@ -114,45 +112,3 @@ class KeyExchangeHandler:
           return {'code': 0,'args': (Y,)}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
-  
-  def exchangeElGamalKeys(self,args):
-    """Exchange keys between two clients.
-    
-    Parameters
-    ----------
-    args : tuple
-      args[0] : str
-        The username of the client
-      args[1] : str
-        The username of the friend
-      args[2] : int
-        The X point of the client's key
-      args[3] : str
-        The MAC of the client's key
-    
-    Return
-    ----------
-    dict
-      code : int
-        2 if successful
-        1 if unsuccessful
-      args : str
-        exception message if unsuccessful
-        tuple of username, key point and cipher MAC if successful
-    """
-    try:
-      username = args[0]
-      friendUsername = args[1]
-      y,g,p = args[2]
-      keyType = args[3]
-      if friendUsername not in self.connectedUsernames:
-        return {'code': 1,'args': "Friend is not online."}
-      for host,u in self.keyClientAndUsernames:
-        if u == friendUsername:
-          host.send(pickle.dumps({'code': 4,'args': (username,(y,g,p),keyType)}))
-          return host
-    except Exception as e:
-      return {'code': 1,'args': "An unknown error occurred."}
-  
-  def exchangePublic(self,args):
-    return {'code': 0,'args': "Success"}  

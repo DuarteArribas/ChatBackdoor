@@ -31,7 +31,7 @@ class ClientOptionHandler:
   NUMBER_BYTES_TO_RECEIVE = 16384
   
   # == Methods ==
-  def __init__(self,mainSocket,keySocket,msgSocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey,currChattingFriend,canBazar):
+  def __init__(self,mainSocket,keySocket,msgSocket,msgHistorySocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey,currChattingFriend,canBazar):
     """Initalize handler.
     
     Parameters
@@ -45,6 +45,7 @@ class ClientOptionHandler:
     self.menuHandler    = menuHandler
     self.keySocket  = keySocket
     self.msgSocket  = msgSocket
+    self.msgHistorySocket = msgHistorySocket
     self.username       = username
     self.clientKeysPath = clientKeysPath
     self.rsaKeySizeBits = int(rsaKeySizeBits)
@@ -412,22 +413,33 @@ class ClientOptionHandler:
     friendToChat : str
       The username of the friend to chat with
     """
+    print("a")
     if not self.exchangeKeys(friendToChat,"AESCipherKeys"):
       return
+    print("b")
     if not self.exchangeKeys(friendToChat,"AESHmacKeys"):
       return
+    print("c")
     if not self.generatePublicKeys(friendToChat,"RSASignatureKeys","RSA"):
       return
+    print("d")
     self.printHistoricalMessages(friendToChat,100)
+    print("e")
     msg = input("> ")
     while msg != "/0":
+      print("1")
       cipherKey,hmacKey,params = self.getKeys(friendToChat)
+      print("2")
       p,q,e,d,n = params
+      print("3")
       n = int(n)
+      print("4")
       cipherKey     = cipherKey.encode("utf-8")
       hmacKey       = hmacKey.encode("utf-8")
       rsaPrivateKey = RSA.construct((n,e,d,p,q))
+      print("5")
       msgBytes      = msg.encode("utf-8")
+      print("aa")
       cipherText,iv,hmac,rsaSig = self.processMsg(
         msgBytes,
         cipherKey,
@@ -435,8 +447,9 @@ class ClientOptionHandler:
         rsaPrivateKey,
         p
       )
+      print("bb")
       self.msgSocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,cipherText,iv,hmac,n,e,rsaSig))))
-      print("\033[A                             \033[A")
+      #print("\033[A                             \033[A")
       self.printUserInput(msg)
       msg = input("> ")
     self.currChattingFriend[0] = None
@@ -453,15 +466,20 @@ class ClientOptionHandler:
     """
     ec   = EllipticCurves()
     X,dA = ec.generateKeys()
+    print("aa")
     self.keySocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,X,keyType))))
     optionArgs = pickle.loads(self.keySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
+    print("bb")
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
       return False
+    print("cc")
     Y = optionArgs["args"][0]
     keyPoint = ec.multiplyPointByScalar(Y,dA)
     key = str(keyPoint[0])
+    print("dd")
     clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}")
+    print("ee")
     if not os.path.exists(clientKeysPath):
       os.makedirs(clientKeysPath)
     with open(os.path.join(clientKeysPath,keyType),"w") as f:
@@ -479,13 +497,19 @@ class ClientOptionHandler:
       The type of key to exchange
     """
     if algorithm == "RSA":
+      print("aaa")
       p,q,e,d = self.generateRSAKeypair()
+      print("bbb")
       N = p * q
+      print("ccc")
       clientKeysPath = os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}")
+      print("ddd")
       if not os.path.exists(clientKeysPath):
         os.makedirs(clientKeysPath)
+      print("eee")
       with open(os.path.join(clientKeysPath,keyType),"w") as f:
         f.write(f"P={p}\nQ={q}\nE={e}\nD={d}\nN={N}")
+      print("fff")
       return True
   
   def processMsg(self,msgBytes,cipherKey,hmacKey,rsaPrivateKey,p):
@@ -561,8 +585,10 @@ class ClientOptionHandler:
     return d
   
   def printHistoricalMessages(self,friendToChat,maxMessages):
-    self.msgSocket[0].send(pickle.dumps(OptionArgs(1,(self.username[0],friendToChat,maxMessages))))
-    optionArgs = pickle.loads(self.msgSocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
+    print("aaaa")
+    self.msgHistorySocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,maxMessages))))
+    optionArgs = pickle.loads(self.msgHistorySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
+    print("bbbb")
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
       return

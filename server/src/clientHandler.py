@@ -61,9 +61,6 @@ class ClientHandler:
     self.keyClientAndUsernames    = keyClientAndUsernames
     self.msgClientAndUsernames    = msgClientAndUsernames
     self.zero                     = ZeroKnowledgeProtocol()
-    self.public_key_client        = None
-    self.x                        = None
-    self.e                        = None
 
   def process(self,option,args = None):
     """Process an option received by the client and call the appropriate client handler method.
@@ -143,7 +140,6 @@ class ClientHandler:
     elif typeOfAuthentication == "Schnorr":
       res = self.cur.execute(f"SELECT username FROM users WHERE username LIKE ? AND publicKey <> '';",(username,))
       return res.fetchall() != []
-      
   
   def saveUserInDB(self,username,dA):
     """Save user in the database.
@@ -183,6 +179,7 @@ class ClientHandler:
       derivedPasswordKey = self.deriveKeysDecryption(Y,dA,salt)
       secret             = self.decryptPassword(derivedPasswordKey,iv,ciphertext)
       self.saveUserSecret(secret,args[1])
+      print(f"{args[1]} just registered using Chap!")
       return {'code': 0,'args': "User registered successfully."}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
@@ -254,14 +251,10 @@ class ClientHandler:
     username: str
       The username of the user to save the secret
     """
-    try:
-      salt     = os.urandom(69).decode("latin-1")
-      pepper = '\x9a6k\xdc)\x80b:@\t\xabm\x80\x93\x8e\xabf7>~\xda(\x92\xc7I\xfe\x0ew\xb3\xc7|\x05\x98s\xb4\x07\x8a\xe0\xec\xf4\x11\xfcDp\xfc\xaflGB3r#\xb6\xd3\xa9\x86l\xech\x7fh\xe5WJ=`\xd5Qh'
-      print("a",scrypt.hash(secret,salt + pepper))
-      self.cur.execute("UPDATE users SET password = ?,salt = ?, temp = ? WHERE username LIKE ?;",(scrypt.hash(secret,salt + pepper).decode("latin-1"),salt,0,username))
-      self.con.commit()
-    except Exception as e:
-      print(e)
+    salt     = os.urandom(69).decode("latin-1")
+    pepper = '\x9a6k\xdc)\x80b:@\t\xabm\x80\x93\x8e\xabf7>~\xda(\x92\xc7I\xfe\x0ew\xb3\xc7|\x05\x98s\xb4\x07\x8a\xe0\xec\xf4\x11\xfcDp\xfc\xaflGB3r#\xb6\xd3\xa9\x86l\xech\x7fh\xe5WJ=`\xd5Qh'
+    self.cur.execute("UPDATE users SET password = ?,salt = ?, temp = ? WHERE username LIKE ?;",(scrypt.hash(secret,salt + pepper).decode("latin-1"),salt,0,username))
+    self.con.commit()
   
   def loginChap1(self,args):
     """Authenticate client in the login process.
@@ -332,11 +325,12 @@ class ClientHandler:
         for client in self.listOfMsgExchangeClients:
           if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(msgSocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
             self.msgClientAndUsernames.append((client,username))
+            print(f"{username} just authenticated using Chap!")
         return {'code': 0,'args': "Authentication successful."}
       else:
         return {'code': 1,'args': "Authentication failed."}
     except Exception as e:
-      print(e)
+      return {'code': 1,'args': "An unknown error occurred."}
 
   def getUserSecret(self, username):
     """Returns user Secret
@@ -397,8 +391,6 @@ class ClientHandler:
       # Set security parameter t - as the number of bits longer will be the calculation of sucessive prime numbers P and Q
       username = args[0]
       self.removeTempUsers(username)
-      if self.isUserAlreadyInDB(username,"Schnorr"):
-        return {'code': 1,'args': "User already exists."}
       t = self.default_t = 7
       # Calculate prime numbers P and Q
       Q = self.zero.calculate_Q(pow(2,2*t))
@@ -428,6 +420,7 @@ class ClientHandler:
       username = args[0]
       publicKey = args[1]
       self.saveUserPublicKey(username,publicKey)
+      print(f"{username} just registered using Schnorr!")
       return {'code': 0,'args': "User registered successfully."}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred. User not registered."}
@@ -448,11 +441,10 @@ class ClientHandler:
   def loginSchnorr1(self,args):
     try:
       username = args[0]
-      if not self.isUserAlreadyInDB(username,"Shnorr"):
+      if not self.isUserAlreadyInDB(username,"Schnorr"):
         return {'code': 1,'args': f"{username} is not yet registered in our database. Register instead, it is easy and secure!"}
       return {'code': 0,'args': self.getSchnorrParameters(username)}
     except Exception as e:
-      print("Error: ", e)
       return {'code': 1,'args': "An unknown error occurred."}
   
   def getSchnorrParameters(self,username):
@@ -464,16 +456,13 @@ class ClientHandler:
       # 3 - Receive number x from client
       username = args[0]
       x = args[1]
-      print("Received from client - number: ", x)
       t = self.getTFromDB(username)
       # 4 - Generates random number e and sends it to the client 
       e = random.randint(0,pow(2,t) - 1)
       self.saveUserX(username,x)
       self.saveUserE(username,e)
-      print('Sending to client - e:', e)
       return {'code': 0,'args': e}
     except Exception as err:
-      print(err)
       return {'code': 1,'args': "An unknown error occurred."}
   
   def saveUserE(self,username,e):
@@ -526,13 +515,8 @@ class ClientHandler:
         mainSocket = args[2]
         keySocket  = args[3]
         msgSocket  = args[4]
-        print('Received from client - y:', y)
         P,B,e,publicKey,x = self.getSchnorrParameters2(username)
         z = (pow(B,y) * pow(publicKey,e)) % P
-
-        print("--------------------")
-        print('Calculated z:', z)
-        print("--------------------")
 
         # 8 - Verifies if the z value is equal to the value x sent by client
         # If it is, then the client (Alice) is authenticated
@@ -546,13 +530,11 @@ class ClientHandler:
           for client in self.listOfMsgExchangeClients:
             if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(msgSocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
               self.msgClientAndUsernames.append((client,username))
-          print("SUCCESS: authenticated!")
+          print(f"{username} just authenticated using Schnorr!")
           return {'code': 0,'args': "Authentication successful."}
         else:
-          print("UNSUCCESS: not authenticated!")
           return {'code': 1,'args': "Authentication failed."}
     except Exception as err:
-      print(err)
       return {'code': 1,'args': "An unknown error occurred."}
 
   def getSchnorrParameters2(self,username):
@@ -589,6 +571,7 @@ class ClientHandler:
         return {'code': 1,'args': "You are already friends."}
       self.cur.execute("INSERT INTO friends (username1,username2,acceptance) VALUES (?,?,?);",(username,friendUsername,0))
       self.con.commit()
+      print(f"{username} just sent a friend invitation to {friendUsername}")
       return {'code': 0,'args': "Friend request sent."}
     except Exception as e:
       return {'code': 1,'args': e}
@@ -668,8 +651,10 @@ class ClientHandler:
       res = self.cur.execute("SELECT username1 FROM friends WHERE username2 LIKE ? AND acceptance = ?;",(username,0))
       results = res.fetchall()
       if results == []:
+        print(f"{username} just asked for its friend requests, but there are none.")
         return {'code': 1,'args': "You have no friend requests."}
       else:
+        print(f"{username} just asked for its friend requests.)")
         return {'code': 0,'args': results}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
@@ -705,10 +690,13 @@ class ClientHandler:
         self.cur.execute("DELETE FROM friends WHERE username1 LIKE ? AND username2 LIKE ?;",(friend,username))
         self.con.commit()
       if len(friendsToAccept) > 0 and len(friendsToReject) == 0:
+        print(f"{username} just accepted some friend requests.")
         return {'code': 0,'args': "Friend requests accepted."}
       elif len(friendsToAccept) == 0 and len(friendsToReject) > 0:
+        print(f"{username} just eliminated some friend requests.")
         return {'code': 0,'args': "Friend requests rejected."}
       else:
+        print(f"{username} just accepted and eliminated some friend requests.")
         return {'code': 0,'args': "Friend requests accepted and rejected."}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
@@ -742,8 +730,10 @@ class ClientHandler:
         else:
           resultsOnline.append(result[0] + " (offline)")
       if results == []:
+        print(f"{username} wanted to check his friends, but he has none.")
         return {'code': 1,'args': "Sorry, you've got no friends 😭"}
       else:
+        print(f"{username} wants to check his friends.")
         return {'code': 0,'args': resultsOnline}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
@@ -775,8 +765,10 @@ class ClientHandler:
         if result[0] in self.connectedUsernames:
           resultsOnline.append(result[0] + " (online)")
       if resultsOnline == []:
+        print(f"{username} wanted to check his online friends, but he has none.")
         return {'code': 1,'args': "Sorry, you've got no friends online 🥲"}
       else:
+        print(f"{username} wants to check his online friends.")
         return {'code': 0,'args': resultsOnline}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred."}
@@ -803,6 +795,7 @@ class ClientHandler:
       self.cur.execute("DELETE FROM friends WHERE username1 LIKE ? AND username2 LIKE ?;",(username,friendUsername))
       self.cur.execute("DELETE FROM friends WHERE username2 LIKE ? AND username1 LIKE ?;",(username,friendUsername))
       self.con.commit()
+      print(f"{username} just removed {friendUsername} as a friend.")
       return {'code': 0,'args': "Friend removed."}
     except Exception as e:
       return {'code': 1,'args': "An unknown error occurred. Friend not removed."}
@@ -832,17 +825,15 @@ class ClientHandler:
       msgSocket  = args[3]
       if username in self.connectedUsernames:
         self.connectedUsernames.remove(username)
-      print("1")
       for client in self.listOfKeyExchangeClients:
         if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(keySocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
           self.keyClientAndUsernames.remove((client,username))
-      print("b")
       for client in self.listOfMsgExchangeClients:
         if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(msgSocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
           self.msgClientAndUsernames.remove((client,username))
+      print(f"{username} just logged out of the system.")
       return {'code': 0,'args': "Logged out."}
     except Exception as e:
-      print(e)
       return {'code': 1,'args': "An unknown error occurred."}
   
   def getUserSalt(self,args):

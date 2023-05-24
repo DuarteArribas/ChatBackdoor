@@ -12,7 +12,7 @@ import os.path
 
 class ChatClient:
   # == Methods ==
-  def __init__(self,ip,mainSocketPort,keySocketPort,msgSocketPort,menuHandler,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey):
+  def __init__(self,ip,mainSocketPort,keySocketPort,msgSocketPort,msgHistorySocketPort,menuHandler,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey):
     """Initialize a socket connection with the server.
     Parameters
     ----------
@@ -33,9 +33,11 @@ class ChatClient:
     self.mainSocketPort      = int(mainSocketPort)
     self.keySocketPort       = int(keySocketPort)
     self.msgSocketPort       = int(msgSocketPort)
+    self.msgHistorySocketPort = int(msgHistorySocketPort)
     self.mainSocket = []
     self.keySocket = []
     self.msgSocket  = []
+    self.msgHistorySocket  = []
     self.menuHandler         = menuHandler
     self.username            = [None]
     self.clientKeysPath      = clientKeysPath
@@ -44,7 +46,7 @@ class ChatClient:
     self.ivKey               = ivKey
     self.currChattingFriend  = [None]
     self.canBazar = [False]
-    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.msgSocket,self.menuHandler,self.username,self.clientKeysPath,self.rsaKeySizeBits,self.elGamalKeySizeBits,self.ivKey,self.currChattingFriend,self.canBazar)
+    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.msgSocket,self.msgHistorySocket,self.menuHandler,self.username,self.clientKeysPath,self.rsaKeySizeBits,self.elGamalKeySizeBits,self.ivKey,self.currChattingFriend,self.canBazar)
     self.keyOptionHandler = KeyOptionHandler(self.keySocket,self.clientKeysPath,self.username,self.canBazar)
     self.msgOptionHandler = MsgOptionHandler(self.msgSocket,self.clientKeysPath,self.username,self.menuHandler,self.currChattingFriend,self.canBazar)
   
@@ -53,9 +55,11 @@ class ChatClient:
     thread1 = threading.Thread(target = self.runMainThread)
     thread2 = threading.Thread(target = self.runKeyThread)
     thread3 = threading.Thread(target = self.runMsgThread)
+    thread4 = threading.Thread(target = self.runMsgHistoryThread)
     thread1.start()
     thread2.start()
     thread3.start()
+    thread4.start()
   
   def runMainThread(self):
     """Run the main thread of the client, which handles the menus."""
@@ -124,3 +128,14 @@ class ChatClient:
       else:
         self.msgSocket[0] = s3 
       self.msgOptionHandler.handleClientMsgExchange()
+  
+  def runMsgHistoryThread(self):
+    """Run the key thread of the client, which handles the key exchange."""
+    with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s4:
+      s4.connect((self.ip,self.msgHistorySocketPort))
+      if self.msgHistorySocket == []:
+        self.msgHistorySocket.append(s4)
+      else:
+        self.msgHistorySocket[0] = s4
+      while True:
+        pass
