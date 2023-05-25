@@ -253,7 +253,7 @@ class ClientHandler:
     """
     salt     = os.urandom(69).decode("latin-1")
     pepper = '\x9a6k\xdc)\x80b:@\t\xabm\x80\x93\x8e\xabf7>~\xda(\x92\xc7I\xfe\x0ew\xb3\xc7|\x05\x98s\xb4\x07\x8a\xe0\xec\xf4\x11\xfcDp\xfc\xaflGB3r#\xb6\xd3\xa9\x86l\xech\x7fh\xe5WJ=`\xd5Qh'
-    self.cur.execute("UPDATE users SET password = ?,salt = ?, temp = ? WHERE username LIKE ?;",(scrypt.hash(secret,salt + pepper).decode("latin-1"),salt,0,username))
+    self.cur.execute("UPDATE users SET password = ?,salt = ?, temp = ? WHERE username LIKE ? AND TEMP = ?;",(scrypt.hash(secret,salt + pepper).decode("latin-1"),salt,0,username,1))
     self.con.commit()
   
   def loginChap1(self,args):
@@ -435,7 +435,7 @@ class ClientHandler:
     publicKey : int
       Client's public key
     """
-    self.cur.execute("UPDATE users SET publicKey = ?, temp = ? WHERE username LIKE ?;",(publicKey,0,username))
+    self.cur.execute("UPDATE users SET publicKey = ?, temp = ? WHERE username LIKE ? and TEMP = ?;",(publicKey,0,username,1))
     self.con.commit()
   
   def loginSchnorr1(self,args):
