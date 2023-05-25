@@ -435,7 +435,7 @@ class ClientHandler:
     publicKey : int
       Client's public key
     """
-    self.cur.execute("UPDATE users SET publicKey = ?, temp = ? WHERE username LIKE ?;",(publicKey,0,username))
+    self.cur.execute("UPDATE users SET publicKey = ?, temp = ? WHERE username LIKE ? and TEMP = ?;",(publicKey,0,username,1))
     self.con.commit()
   
   def loginSchnorr1(self,args):
