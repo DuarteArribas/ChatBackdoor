@@ -18,16 +18,24 @@ class ChatClient:
     ----------
     ip             : str
       The ip of the server
-    mainSocketPort : int
+    mainSocketPort : str
       The port of the socket with the main thread
-    keySocketPor   : int
+    keySocketPor   : str
       The port of the socket with the key thread
-    msgSocketPor   : int
+    msgSocketPor   : str
       The port of the socket with the message thread
+    msgHistorySocketPor   : str
+      The port of the socket with the message history thread
     menuHandler    : MenuHandler
       The menu handler of the client
     clientKeysPath : str
       The path of the client keys
+    rsaKeySizeBits : str
+      The size of the RSA key in bits
+    elGamalKeySizeBits : str
+      The size of the ElGamal key in bits
+    ivKey          : str
+      The key used to encrypt the messages
     """
     self.ip                  = ip
     self.mainSocketPort      = int(mainSocketPort)

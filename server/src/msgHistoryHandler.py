@@ -26,8 +26,10 @@ class MsgHistoryHandler:
       The cursor to the local database
     connectedUsernames    : list
       The list of usernames of connected clients
-    keyClientAndUsernames : list
-      The list of clients for key exchange and respective usernames
+    ivKey                 : str
+      The key used to encrypt the messages
+    iv                    : str
+      The initialization vector used to encrypt the messages
     """
     self.MSG_HISTORY_HANDLER_METHOD = {
       0: self.getHistoricalMessages

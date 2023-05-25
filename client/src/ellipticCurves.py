@@ -121,6 +121,19 @@ class EllipticCurves:
     return len(s)       # len('100101') --> 6
   
   def multiplyPointByScalar(self, p, n):
+    """Multiply a point by a scalar. 
+    
+    Parameters
+    ----------
+    p : point (x, y)
+      Point in the elliptic curve
+    n : int
+      Scalar to multiply the point
+
+    Return
+    ----------
+    result : point (x, y) which is the result of the multiplication by a scalar
+    """
     nbits = self.bit_length(n)
     result = None
     for i in range(nbits - 1, -1, -1):

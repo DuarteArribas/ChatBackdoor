@@ -26,6 +26,8 @@ class KeyOptionHandler:
       The path of the client keys
     username : str
       The username of the client
+    canBazar : bool
+      Boolean variable to control user program's exit
     """
     self.keySocket  = keySocket
     self.clientKeysPath = clientKeysPath

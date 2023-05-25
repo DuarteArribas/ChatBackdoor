@@ -36,10 +36,30 @@ class ClientOptionHandler:
     
     Parameters
     ----------
-    con : sqlite3.Connection
-      The connection to the local database
-    cur : sqlite3.Cursor
-      The cursor to the local database
+    mainSocket : int
+      The port of the socket with the main thread
+    keySocket   : int
+      The port of the socket with the key thread
+    msgSocket   : int
+      The port of the socket with the message thread
+    msgHistorySocket   : int
+      The port of the socket with the message history thread
+    menuHandler    : MenuHandler
+      The menu handler of the client
+    username       : str
+      The username of the client
+    clientKeysPath : str
+      The path of the client keys
+    rsaKeySizeBits : str
+      The size of the RSA key in bits
+    elGamalKeySizeBits : str
+      The size of the ElGamal key in bits
+    ivKey          : str
+      The key used to encrypt the messages
+    currChattingFriend  : str
+      The username of the friend the client is currently chatting with
+    canBazar : bool
+      Boolean variable to control user program's exit
     """
     self.mainSocket = mainSocket
     self.menuHandler    = menuHandler
@@ -60,9 +80,7 @@ class ClientOptionHandler:
     Parameters
     ----------
     option   : str
-      Upload | Download
-    currMenu : Menu.MENUS
-      The current menu
+      The option chosen by the user
     """
     if self.menuHandler.currMenu == Menu.MENUS.INITIAL:
       if option == 1:
@@ -186,6 +204,7 @@ class ClientOptionHandler:
       self.username[0] = username
   
   def schnorrRegister(self):
+    """Registers user using the Schnorr protocol."""
     username = input("Username: (0 to exit) ")
     if username == "0":
       return
@@ -219,6 +238,7 @@ class ClientOptionHandler:
       print(optionArgs["args"])
     
   def schnorrLogin(self):
+    """Logs user in using the Schnorr protocol."""
     username = input("Username: (0 to exit) ")
     if username == "0":
       return
@@ -376,7 +396,12 @@ class ClientOptionHandler:
       print(optionArgs["args"])
       
   def getFriend(self):
-    """Gets the username of another user to chat with."""
+    """Gets the username of another user to chat with.
+    
+    Returns
+    -------
+    friendToChat : str
+    """
     self.mainSocket[0].send(pickle.dumps(OptionArgs(10,(self.username[0],))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
@@ -399,7 +424,7 @@ class ClientOptionHandler:
         return optionArgs["args"][int(friend) - 1].split(" ")[0].split(" ")[0]
   
   def chat(self,friendToChat):
-    """Chat with another user, exchanging keys.
+    """Chat with another user, exchanging keys and displaying chat interface.
     
     Parameters
     ----------
@@ -446,6 +471,10 @@ class ClientOptionHandler:
       The username of the friend to chat with
     keyType : str
       The type of key to exchange
+
+    Returns
+    -------
+    True if the exchange was successful, False otherwise
     """
     ec   = EllipticCurves()
     X,dA = ec.generateKeys()
@@ -473,6 +502,12 @@ class ClientOptionHandler:
       The username of the friend to chat with
     keyType : str
       The type of key to exchange
+    algorithm : str
+      The algorithm to use
+
+    Returns
+    -------
+    True if the generation was successful
     """
     if algorithm == "RSA":
       p,q,e,d = self.generateRSAKeypair()
@@ -485,6 +520,25 @@ class ClientOptionHandler:
       return True
   
   def processMsg(self,msgBytes,cipherKey,hmacKey,rsaPrivateKey,p):
+    """Calculation of parameters necessary for the chatting process, such as the initialization vector, the cipher text, the HMAC and the RSA digital signature.
+    
+    Parameters
+    ----------
+    msgBytes : bytes
+      The message in bytes to be used for calculation of cipher text
+    cipherKey : bytes
+      The cipher key to be used for calculation of cipher text
+    hmacKey : bytes
+      The HMAC key to be used for calculation of HMAC
+    rsaPrivateKey : RSA
+      The RSA private key to be used for calculation of RSA digital signature
+    p : int
+      The prime number p to be used for the initialization vector
+
+    Returns
+    -------
+    tuple with the cipher text, the initialization vector, the HMAC and the RSA digital signature
+    """
     cipherKeyAndHmacKey = (
       str(len(cipherKey.decode("utf-8"))) + ":" + str(len(cipherKey.decode("utf-8")) + len(hmacKey.decode("utf-8"))) + ":" + cipherKey.decode("utf-8") + hmacKey.decode("utf-8") + str(p)
     ).encode("utf-8")
@@ -495,21 +549,65 @@ class ClientOptionHandler:
     return (cipherText,iv,hmac,rsaSig)
   
   def cipherMsg(self,msg,cipherKey,iv):
+    '''Encrypts a message using AES in CBC mode.
+    
+    Parameters
+    ----------
+    msg : bytes
+      The message in bytes to be encrypted
+    cipherKey : bytes
+      The cipher key to be used for encryption
+    iv : bytes
+      The initialization vector to be used for encryption
+    '''
     cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])
     cipherTextBytes = cipher.encrypt(pad(msg,AES.block_size))
     return cipherTextBytes
 
   def calculateMsgHmac(self,msg,hmacKey):
+    '''Calculates the HMAC of a message using SHA512.
+    
+    Parameters
+    ----------
+    msg : bytes
+      The message in bytes to be used for HMAC calculation
+    hmacKey : bytes
+      The HMAC key to be used for HMAC calculation
+    '''
     h = HMAC.new(hmacKey,digestmod = SHA512)
     h.update(msg)
     return h.hexdigest()
   
   def calculateRSADigitalSignature(self,msg,rsaPrivateKey):
+    '''Calculates the RSA digital signature of a message using SHA512.
+    
+    Parameters
+    ----------
+    msg : bytes
+      The message in bytes to be used for RSA digital signature calculation
+    rsaPrivateKey : RSA
+      The RSA private key to be used for RSA digital signature calculation
+
+    Returns
+    -------
+    Digital signature of the message
+    '''
     msgHash = SHA512.new(msg)
     signer = pkcs1_15.new(rsaPrivateKey)
     return signer.sign(msgHash)
   
   def getKeys(self,friendToChat):
+    '''Gets the keys of a friend user.
+    
+    Parameters
+    ----------
+    friendToChat : str
+      The username of the friend to chat with
+    
+    Returns
+    -------
+    tuple with the cipher key, the HMAC key and the RSA parameters
+    '''
     with open(os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}","AESCipherKeys"),"r") as f:
       cipherKey = f.read()
       with open(os.path.join(self.clientKeysPath,f"{self.username[0]}Keys",f"{self.username[0]}-{friendToChat}","AESHmacKeys"),"r") as f2:
@@ -524,12 +622,35 @@ class ClientOptionHandler:
           return (cipherKey,hmacKey,(p,q,e,d,n))
       
   def printUserInput(self,msg):
+    '''Prints the user input.
+    
+    Parameters
+    ----------
+    msg : str
+      The message to be printed
+    
+    '''
     print(f"{{{self.username[0]}}} : {msg}")
   
   def printFriendInput(self,friendToChat,msg):
+    '''Prints the friend input.
+    
+    Parameters
+    ----------
+    friendToChat : str
+      The username of the friend to chat with
+    msg : str
+      The message to be printed
+    '''
     print(f"\t\t\t{msg} : {{{friendToChat}}}")
     
   def generateRSAKeypair(self):
+    '''Generates parameters and uses them for the calculation of the RSA key pair.
+    
+    Returns
+    -------
+    tuple with the prime numbers p and q, the public exponent e and the private exponent d
+    '''
     p = self.generatePrimeNumber()
     q = self.generatePrimeNumber()
     phi_N = (p - 1) * (q - 1)
@@ -538,12 +659,31 @@ class ClientOptionHandler:
     return p,q,e,d
 
   def generatePrimeNumber(self):
+    '''Generates a prime number with a size between 10**250 and 10**251 bits.
+
+    Returns
+    -------
+    prime number
+    '''
     while True:
       num = random.randint(10**250,10**251)
       if isprime(num):
         return num
 
   def calculatePrivateExponent(self,e,phi_N):
+    '''Calculates the private exponent d needed to dissimulate the RSA key pair.
+    
+    Parameters
+    ----------
+    e : int
+      The public exponent
+    phi_N : int
+      The Euler totient function of N
+
+    Returns
+    -------
+    private exponent d
+    '''
     def extendedGcd(a,b):
       if b == 0:
         return a, 1, 0
@@ -557,6 +697,15 @@ class ClientOptionHandler:
     return d
   
   def printHistoricalMessages(self,friendToChat,maxMessages):
+    '''Prints the historical messages between the user and a friend user.
+    
+    Parameters
+    ----------
+    friendToChat : str
+      The username of the friend to chat with
+    maxMessages : int
+      The maximum number of messages to show
+    '''
     self.msgHistorySocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,maxMessages))))
     optionArgs = pickle.loads(self.msgHistorySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:

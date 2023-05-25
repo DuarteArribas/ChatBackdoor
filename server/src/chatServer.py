@@ -33,12 +33,16 @@ class ChatServer:
       The port of the socket with the key thread
     msgSocketPort  : int
       The port of the socket with the message thread
+    msgHistorySocketPort  : int
+      The port of the socket with the message history thread
     maxClients     : int
       The maximum number of clients to handle
     con            : sqlite3.Connection
       The connection to the local database
     cur            : sqlite3.Cursor
       The cursor to the local database
+    ivKey          : str
+      The key used to encrypt the messages
     """
     self.ip                              = ip
     self.mainSocketPort                  = int(mainSocketPort)
@@ -157,6 +161,8 @@ class ChatServer:
     ----------
     client : socketObject
       The client to handle
+    clientAddress : tuple
+      The client address containing the ip and the port
     """
     try:
       print("Main Socket: Connected to " + str(clientAddress) + " on port " + str(self.mainSocketPort) + "...")
@@ -176,6 +182,8 @@ class ChatServer:
     ----------
     client : socketObject
       The client to handle
+    clientAddress : tuple
+      The client address containing the ip and the port
     """
     try:
       print("Key Exchange Socket: Connected to " + str(clientAddress) + " on port " + str(self.keySocketPort) + "...")
@@ -199,6 +207,8 @@ class ChatServer:
     ----------
     client : socketObject
       The client to handle
+    clientAddress : tuple
+      The client address containing the ip and the port
     """
     try:
       print("Msg Queue Socket: Connected to " + str(clientAddress) + " on port " + str(self.msgSocketPort) + "...")
@@ -216,6 +226,8 @@ class ChatServer:
     ----------
     client : socketObject
       The client to handle
+    clientAddress : tuple
+      The client address containing the ip and the port
     """
     try:
       print("Msg History Socket: Connected to " + str(clientAddress) + " on port " + str(self.msgHistorySocketPort) + "...")

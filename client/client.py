@@ -22,6 +22,7 @@ def main():
     cfg.get("APP","ELGAMAL_KEY_SIZE_BITS"),
     cfg.get("APP","IV_KEY")
   )
+  # Run client
   client.runClient()
   
 if __name__ == '__main__':

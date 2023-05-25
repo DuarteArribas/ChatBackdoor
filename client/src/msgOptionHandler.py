@@ -36,6 +36,12 @@ class MsgOptionHandler:
       The path of the client keys
     username : str
       The username of the client
+    menuHandler : Menu
+      The menu handler
+    currChattingFriend : str
+      The current chatting friend 
+    canBazar : bool
+      Boolean variable to control user program's exit
     """
     self.msgSocket  = msgSocket
     self.clientKeysPath = clientKeysPath
@@ -45,7 +51,7 @@ class MsgOptionHandler:
     self.canBazar = canBazar
   
   def handleClientMsgExchange(self):
-    """Handle the client key exchange."""
+    """Handle the client msg exchange in the chat process."""
     while True:
       try:
         readable, _, _ = select.select([self.msgSocket[0]], [], [], 1)
@@ -79,15 +85,58 @@ class MsgOptionHandler:
         print(e)
   
   def decipherMsg(self,cipherText,cipherKey,iv):
+    '''Decipher a message.
+    
+    Parameters
+    ----------
+    cipherText : bytes
+      The cipher text
+    cipherKey : bytes
+      The cipher key
+    iv : bytes
+      The initialization vector
+
+    Return
+    ----------
+    Deciphered message : str
+    '''
     cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])
     return unpad(cipher.decrypt(cipherText),AES.block_size).decode("utf-8")
 
   def calculateMsgHmac(self,msg,hmacKey):
+    '''Calculate the HMAC of a message.
+    
+    Parameters
+    ----------
+    msg : bytes
+      The message
+    hmacKey : bytes
+      The HMAC key
+
+    Return
+    ----------
+    HMAC of the message : str
+    '''
     h = HMAC.new(hmacKey,digestmod = SHA512)
     h.update(msg)
     return h.hexdigest()
   
   def verifyRSADigitalSignature(self,msg,rsaSig,rsaPublicKey):
+    '''Verify the RSA digital signature of a message.
+    
+    Parameters
+    ----------
+    msg : bytes
+      The message
+    rsaSig : bytes
+      The RSA digital signature
+    rsaPublicKey : RSA key 
+      The RSA public key
+    
+    Return
+    ----------
+    True if the RSA digital signature is valid, False otherwise
+    '''
     msgHash = SHA512.new(msg)
     verifier = pkcs1_15.new(rsaPublicKey)
     try:
@@ -97,6 +146,6 @@ class MsgOptionHandler:
       return False
   
   def printFriendInput(self,friendToChat,msg):
-    #print("\033[A                             \033[A")
+    '''Print the friend's input in the chat.'''
     print(f"\t\t\t{msg} : {{{friendToChat}}}")
     print("> ")

@@ -24,6 +24,7 @@ def main():
     cur,
     cfg.get("APP","IV_KEY")
   )
+  # Run server
   server.runServer()
   
 

@@ -24,14 +24,14 @@ class ClientHandler:
       The cursor to the local database
     connectedUsernames       : list
       The list of usernames of connected clients
-    listOfClients            : list
-      The list of clients
     listOfKeyExchangeClients : list
       The list of clients for key exchange
-    clientAndUsernames       : list
-      The list of clients and respective usernames
+    listOfMsgExchangeClients : list
+      The list of clients for message exchange
     keyClientAndUsernames    : list
       The list of clients for key exchange and respective usernames
+    msgClientAndUsernames    : list
+      The list of clients for message exchange and respective usernames
     """
     self.CLIENT_HANDLER_METHOD = {
       0: self.registerChap1,
@@ -128,6 +128,8 @@ class ClientHandler:
     ----------
     username : str
       Client's username
+    typeOfAuthentication : str
+      The type of authentication to be used (Chap or Schnorr)
 
     Return
     ----------
@@ -149,7 +151,7 @@ class ClientHandler:
     username : str
       Client's username
     dA : int
-      Client's "private" key
+      Client's secret value ("private" key)
     """
     self.cur.execute("INSERT INTO users (username,dA,temp) VALUES (?,?,?);",(username,str(dA),1))
     self.con.commit()
@@ -185,7 +187,7 @@ class ClientHandler:
       return {'code': 1,'args': "An unknown error occurred."}
   
   def getDA(self,username):
-    """Get user's "private" key.
+    """Get user's secret value ("private" key).
     
     Parameters
     ----------
@@ -195,7 +197,7 @@ class ClientHandler:
     Return
     ----------
     dA : int
-      Client's "private" key
+      Client's secret value ("private" key)
     """
     res = self.cur.execute(f"SELECT dA FROM users WHERE username LIKE ?;",(username,))
     return res.fetchall()[0][0]
@@ -208,7 +210,7 @@ class ClientHandler:
     Y    : str
       The public key of the client
     dA   : int
-      Client's "private" key
+      Client's secret value ("private" key)
     salt : int
       Salt used for the key derivation function
  
@@ -231,10 +233,14 @@ class ClientHandler:
     ----------
     derivedPasswordKey: str
       Key used for encryption
-    cipherText: str
-      Base64 encoded
     iv: str
       Initialization Vector
+    cipherText: str
+      Base64 encoded
+
+    Return
+    ----------
+    decryptedPassword: str
     """
     cipher = AES.new(derivedPasswordKey,AES.MODE_CBC,iv)
     ciphertext_decoded = b64decode(cipherText)
@@ -387,6 +393,17 @@ class ClientHandler:
       return {'code': 1,'args': "An unknown error occurred."}
   
   def registerSchnorr1(self,args):
+    '''Register user in the database and generate the parameters for the Schnorr protocol.
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+
+    Return
+    ----------
+    dict containing the code and the arguments which are the parameters for the Schnorr protocol
+    '''
     try:
       # Set security parameter t - as the number of bits longer will be the calculation of sucessive prime numbers P and Q
       username = args[0]
@@ -411,11 +428,30 @@ class ClientHandler:
       Client's username
     t : int
       Security parameter
+    P : int
+      Prime number
+    Q : int
+      Prime number
+    B : int
+      Generator
     """
     self.cur.execute("INSERT INTO users (username,t,P,Q,B,temp) VALUES (?,?,?,?,?,?);",(username,t,P,Q,B,1))
     self.con.commit()
   
   def registerSchnorr2(self,args):
+    '''Register user in the database and generate the parameters for the Schnorr protocol.
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+    publicKey : int
+      Client's public key
+
+    Return
+    ----------
+    dict containing the code and the arguments which inform if the user was registered successfully
+    '''
     try:
       username = args[0]
       publicKey = args[1]
@@ -439,6 +475,13 @@ class ClientHandler:
     self.con.commit()
   
   def loginSchnorr1(self,args):
+    '''Verifies if the user exists in the database and returns the parameters for the Schnorr protocol.
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+    '''
     try:
       username = args[0]
       if not self.isUserAlreadyInDB(username,"Schnorr"):
@@ -448,10 +491,32 @@ class ClientHandler:
       return {'code': 1,'args': "An unknown error occurred."}
   
   def getSchnorrParameters(self,username):
+    '''Get user's parameters for the Schnorr protocol.
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+    
+    Return
+    ----------
+    tuple containing the parameters for the Schnorr protocol
+    '''
     self.cur.execute("SELECT P,Q,B FROM users WHERE username LIKE ?;",(username,))
     return self.cur.fetchall()[0]
   
   def loginSchnorr2(self,args):
+    '''Calculates and returns the parameter e of the Schnorr protocol.
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+
+    Return
+    ----------
+    dict containing the code and the arguments which are the parameter e
+    '''
     try:
       # 3 - Receive number x from client
       username = args[0]
@@ -508,6 +573,23 @@ class ClientHandler:
     return res.fetchall()[0][0]
   
   def loginSchnorr3(self,args):
+    '''Performs the last step of the Schnorr protocol and verifies if the user is authenticated
+    
+    Parameters
+    ----------
+    username : str
+      Client's username
+    y : int
+      Client's y
+    keySocket : socket
+      The socket with the key thread
+    msgSocket : socket
+      The socket with the message thread
+    
+    Return
+    ----------
+    dict containing the code and the arguments which inform if the user was authenticated successfully
+    '''
     try:
         # 7 - Receives the response from the client and calculates a z value
         username = args[0]
@@ -538,6 +620,7 @@ class ClientHandler:
       return {'code': 1,'args': "An unknown error occurred."}
 
   def getSchnorrParameters2(self,username):
+    '''Get user's parameters for the Schnorr protocol.'''
     self.cur.execute("SELECT P,B,e,publicKey,x FROM users WHERE username LIKE ?;",(username,))
     return self.cur.fetchall()[0]
   

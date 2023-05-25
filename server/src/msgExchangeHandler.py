@@ -24,8 +24,14 @@ class MsgExchangeHandler:
       The cursor to the local database
     connectedUsernames    : list
       The list of usernames of connected clients
-    keyClientAndUsernames : list
-      The list of clients for key exchange and respective usernames
+    msgClientAndUsernames : list
+      The list of clients for message exchange and respective usernames
+    ivKey                 : str
+      The key used to encrypt the messages
+    iv                    : str
+      The initialization vector used to encrypt the messages
+    msgQueue              : list
+      The list of messages to be sent
     """
     self.con                   = con
     self.cur                   = cur
@@ -43,8 +49,12 @@ class MsgExchangeHandler:
     args : tuple
       args[0] = username of current user
       args[1] = friendUsername
-      args[2] = message
-    
+      args[2] = cipherText
+      args[3] = iv
+      args[4] = hmac
+      args[5] = N (RSA)
+      args[6] = e (RSA)
+      args[7] = rsaSig
     Return
     ----------
     dict
@@ -103,25 +113,97 @@ class MsgExchangeHandler:
       pass
     
   def decipherMsg(self,cipherText,cipherKey,iv):
+    '''Decipher a message.
+    
+    Parameters
+    ----------
+    cipherText : bytes
+      The cipher text
+    cipherKey : bytes
+      The cipher key
+    iv : bytes
+      The initialization vector
+
+    Return
+    ----------
+    Deciphered message : str
+    '''
     cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])
     return unpad(cipher.decrypt(cipherText),AES.block_size)
   
   def cipherMsg(self,msg,cipherKey,iv):
+    '''Cipher a message.
+    
+    Parameters
+    ----------
+    msg : bytes
+      The message
+    cipherKey : bytes
+      The cipher key
+    iv : bytes
+      The initialization vector
+
+    Return
+    ----------
+    Ciphered message : bytes
+    
+    '''
     cipher = AES.new(cipherKey.ljust(16,b"\0")[:16],AES.MODE_CBC,iv.ljust(16,b"\0")[:16])
     cipherTextBytes = cipher.encrypt(pad(msg,AES.block_size))
     return cipherTextBytes
 
   def calculateMsgHmac(self,msg,hmacKey):
+    '''Calculate the HMAC of a message.
+    
+    Parameters
+    ----------
+    msg : bytes
+      The message
+    hmacKey : bytes
+      The HMAC key
+
+    Return
+    ----------
+    HMAC of the message : str
+    '''
     h = HMAC.new(hmacKey,digestmod = SHA512)
     h.update(msg)
     return h.hexdigest()
   
   def calculateRSADigitalSignature(self,msg,rsaPrivateKey):
+    '''Calculate the RSA digital signature of a message.
+    
+    Parameters
+    ----------
+    msg : bytes
+      The message
+    rsaPrivateKey : RSA.RsaKey
+      The RSA private key
+    
+    Return
+    ----------
+    RSA digital signature of the message : bytes
+    '''
     msgHash = SHA512.new(msg)
     signer = pkcs1_15.new(rsaPrivateKey)
     return signer.sign(msgHash)
 
   def calculateDFromParams(self,p,q,e):
+    '''Calculate the RSA private key parameter d from the parameters p, q and e.
+    
+    Parameters
+    ----------
+    p : int
+      The RSA parameter p
+    q : int
+      The RSA parameter q
+    e : int
+      The RSA parameter e
+
+    Return
+    ----------
+    RSA private key parameter d : int
+    '''
     phi_N = (p - 1) * (q - 1)
     def extendedGcd(a, b):
       if b == 0:

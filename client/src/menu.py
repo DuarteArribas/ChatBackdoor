@@ -15,17 +15,26 @@ class Menu():
       0 for exit
   MAIN_MENU_OPTIONS    : list
     Possible options for the main menu
-      1 for opening the friends' menu
-      2 for messaging a friend
-      3 for checking messages
-      0 for returning to initial menu
+      1 for friends' menu
+      2 for chatting with a friend
+      0 for logout
   FRIEND_MENU_OPTIONS  : list
     Possible options for the friends' menu
       1 for adding a friend
       2 for checking friends requests
-      3 for removing a friend
-      4 for checking friends list
+      3 for checking friends list
+      4 for removing a friend
       0 for returning to main menu
+  REGISTER_MENU_OPTIONS : list
+    Possible options for the register menu
+      1 for CHAP registration
+      2 for Schnorr Protocol registration
+      0 for exit
+  LOGIN_MENU_OPTIONS : list
+    Possible options for the login menu
+      1 for CHAP login 
+      2 for Schnorr Protocol login
+      0 for exit
   """
   # == Attributes ==
   MENUS = Enum('MENUS','INITIAL MAIN FRIEND CHAT REGISTER LOGIN')
@@ -42,6 +51,7 @@ class Menu():
   
   @staticmethod
   def printInitialMenu():
+    '''Print the initial menu.'''
     print("\n=============================================")
     print("Welcome to the chat! What do you want to do?")
     print("1 - Register")
@@ -74,6 +84,7 @@ class Menu():
   
   @staticmethod
   def printRegisterMenu():
+    '''Print the register menu.'''
     print("\n=============================================")
     print("Which register method do you wish to use?")
     print("1 - Register using CHAP (strong authentication)")
@@ -106,6 +117,7 @@ class Menu():
   
   @staticmethod
   def printLoginMenu():
+    '''Print the login menu.'''
     print("\n=============================================")
     print("Which login method do you wish to use?")
     print("1 - Login using CHAP (strong authentication)")
@@ -138,6 +150,7 @@ class Menu():
   
   @staticmethod
   def printMainMenu():
+    '''Print the main menu.'''
     print("\n=============================================")
     print("Welcome to your main page! Select an option!")
     print("1 - Friend list")
@@ -170,6 +183,7 @@ class Menu():
 
   @staticmethod
   def printFriendMenu():
+    '''Print the friends menu.'''
     print("\n=============================================")
     print("Welcome to your friends page! Which friends are you choosing today?")
     print("1 - Add a friend")

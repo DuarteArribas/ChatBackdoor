@@ -41,6 +41,20 @@ class MsgQueueHandler:
       return self.MSG_QUEUE_HANDLER_METHOD[option](args)
   
   def addMessageToQueue(self,args):
+    '''Add necessary parameters to the message queue.
+    
+    Parameters
+    ----------
+    args : tuple
+      args[0] = username of current user
+      args[1] = friendUsername
+      args[2] = cipherText
+      args[3] = iv
+      args[4] = hmac
+      args[5] = N (RSA)
+      args[6] = e (RSA)
+      args[7] = rsaSig
+    '''
     username          = args[0]
     friendUsername    = args[1]
     cipherText        = args[2]
