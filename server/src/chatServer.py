@@ -20,7 +20,7 @@ class ChatServer:
   NUMBER_BYTES_TO_RECEIVE = 16384
   
   # == Methods ==
-  def __init__(self,ip,mainSocketPort,keySocketPort,msgSocketPort,msgHistorySocketPort,maxClients,con,cur,ivKey):
+  def __init__(self,ip,mainSocketPort,keySocketPort,keySocketPort2,msgSocketPort,msgHistorySocketPort,maxClients,con,cur,ivKey):
     """Server initialization.
     
     Parameters
@@ -47,6 +47,7 @@ class ChatServer:
     self.ip                              = ip
     self.mainSocketPort                  = int(mainSocketPort)
     self.keySocketPort                   = int(keySocketPort)
+    self.keySocketPort2                  = int(keySocketPort2)
     self.msgSocketPort                   = int(msgSocketPort)
     self.msgHistorySocketPort            = int(msgHistorySocketPort)
     self.maxClients                      = int(maxClients)
@@ -56,8 +57,10 @@ class ChatServer:
     self.iv                              = b'J\xc7\xdc\xd33#D\xf8\xcf\x86o\x97\x81\xe0f\xcb'
     self.connectedUsernames              = []
     self.listOfKeyExchangeClients        = []
+    self.listOfKeyExchangeClients2        = []
     self.listOfMsgExchangeClients        = []
     self.keyClientAndUsernames           = []
+    self.keyClientAndUsernames2           = []
     self.msgClientAndUsernames           = []
     self.msgQueue                        = []
     self.clientHandler                   = ClientHandler(
@@ -65,15 +68,18 @@ class ChatServer:
       self.cur,
       self.connectedUsernames,
       self.listOfKeyExchangeClients,
+      self.listOfKeyExchangeClients2,
       self.listOfMsgExchangeClients,
       self.keyClientAndUsernames,
+      self.keyClientAndUsernames2,
       self.msgClientAndUsernames
     )
     self.keyExchangeHandler              = KeyExchangeHandler(
       self.con,
       self.cur,
       self.connectedUsernames,
-      self.keyClientAndUsernames
+      self.keyClientAndUsernames,
+      self.keyClientAndUsernames2
     )
     self.msgQueueHandler                 = MsgQueueHandler(
       self.msgQueue
@@ -102,11 +108,13 @@ class ChatServer:
     thread3 = threading.Thread(target = self.runMsgThread)
     thread4 = threading.Thread(target = self.runMsgQueueThread)
     thread5 = threading.Thread(target = self.runHistoryThread)
+    thread6 = threading.Thread(target = self.runKeyThread2)
     thread1.start()
     thread2.start()
     thread3.start()
     thread4.start()
     thread5.start()
+    thread6.start()
   
   def runMainThread(self):
     """Accept main connections from clients."""
@@ -128,6 +136,17 @@ class ChatServer:
         client,clientAddress = s.accept()
         self.listOfKeyExchangeClients.append(client)
         start_new_thread(self.keyExchangeThread,(client,clientAddress))
+  
+  def runKeyThread2(self):
+    """Accept key exchange connections from clients."""
+    with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
+      s.bind((self.ip,self.keySocketPort2))
+      s.listen(self.maxClients)
+      print("The server is listening on port " + str(self.keySocketPort2) + "...")
+      while True:
+        client,clientAddress = s.accept()
+        self.listOfKeyExchangeClients2.append(client)
+        start_new_thread(self.keyExchangeThread2,(client,clientAddress))
   
   def runMsgThread(self):
     """Accept message exchange connections from clients."""
@@ -192,14 +211,27 @@ class ChatServer:
         opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client1 data
         response = self.keyExchangeHandler.process(opt_args.option,opt_args.args)
+    except Exception as e: #handle client disconnection gracefully
+      print("err: ", e)
+  
+  def keyExchangeThread2(self,client,clientAddress):
+    """Thread to handle the clients' operations.
+    Parameters
+    ----------
+    client : socketObject
+      The client to handle
+    clientAddress : tuple
+      The client address containing the ip and the port
+    """
+    try:
+      print("Key Exchange Socket: Connected to " + str(clientAddress) + " on port " + str(self.keySocketPort2) + "...")
+      while True:
         # Receive client2 data
-        opt_args = pickle.loads(response.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
+        opt_args = pickle.loads(client.recv(ChatServer.NUMBER_BYTES_TO_RECEIVE))
         # Process client2 data
         response = self.keyExchangeHandler.process(opt_args.option,opt_args.args)
-        # Send response back to client1
-        client.send(pickle.dumps(response))
-    except Exception: #handle client disconnection gracefully
-      pass
+    except Exception as e: #handle client disconnection gracefully
+      print("err: ", e)
       
   def msgQueueThread(self,client,clientAddress):
     """Thread to handle the clients' operations.

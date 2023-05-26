@@ -17,6 +17,7 @@ def main():
     cfg.get("APP","IP"),
     cfg.get("APP","MAIN_SOCKET_PORT"),
     cfg.get("APP","KEY_SOCKET_PORT"),
+    cfg.get("APP","KEY_SOCKET_PORT2"),
     cfg.get("APP","MSG_SOCKET_PORT"),
     cfg.get("APP","MSG_HISTORY_SOCKET_PORT"),
     cfg.get("APP","MAX_CLIENTS"),
