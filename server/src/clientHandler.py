@@ -287,6 +287,7 @@ class ClientHandler:
       self.saveUserNonce(username,nonce)
       return {'code': 0,'args': nonce}
     except Exception as e:
+      print(e)
       return {'code': 1,'args': "An unknown error occurred."}
   
   def saveUserNonce(self,username,nonce):
@@ -916,6 +917,7 @@ class ClientHandler:
       username = args[0]
       mainSocket = args[1]
       keySocket  = args[2]
+      keySocket2  = args[4]
       msgSocket  = args[3]
       if username in self.connectedUsernames:
         self.connectedUsernames.remove(username)
@@ -925,6 +927,9 @@ class ClientHandler:
       for client in self.listOfMsgExchangeClients:
         if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(msgSocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
           self.msgClientAndUsernames.remove((client,username))
+      for client in self.listOfKeyExchangeClients2:
+        if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(keySocket2).split("laddr=(")[1].split(", ")[1].split(")")[0]:
+          self.keyClientAndUsernames2.remove((client,username))
       print(f"{username} just logged out of the system.")
       return {'code': 0,'args': "Logged out."}
     except Exception as e:
