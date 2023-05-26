@@ -13,7 +13,7 @@ import scrypt
 
 class ClientHandler:
   # == Methods ==
-  def __init__(self,con,cur,connectedUsernames,listOfKeyExchangeClients,listOfMsgExchangeClients,keyClientAndUsernames,msgClientAndUsernames):
+  def __init__(self,con,cur,connectedUsernames,listOfKeyExchangeClients,listOfKeyExchangeClients2,listOfMsgExchangeClients,keyClientAndUsernames,keyClientAndUsernames2,msgClientAndUsernames):
     """Initalize handler.
     
     Parameters
@@ -58,8 +58,10 @@ class ClientHandler:
     self.connectedUsernames       = connectedUsernames
     self.listOfKeyExchangeClients = listOfKeyExchangeClients
     self.listOfMsgExchangeClients = listOfMsgExchangeClients
+    self.listOfKeyExchangeClients2 = listOfKeyExchangeClients2
     self.keyClientAndUsernames    = keyClientAndUsernames
     self.msgClientAndUsernames    = msgClientAndUsernames
+    self.keyClientAndUsernames2    = keyClientAndUsernames2
     self.zero                     = ZeroKnowledgeProtocol()
 
   def process(self,option,args = None):
@@ -321,6 +323,7 @@ class ClientHandler:
       mainSocket = args[2]
       keySocket  = args[3]
       msgSocket  = args[4]
+      keySocket2 = args[5]
       secret     = self.getUserSecret(username)
       nonce      = self.getUserNonce(username)
       if challenge == Chap.getChapChallenge(nonce,secret):
@@ -331,11 +334,15 @@ class ClientHandler:
         for client in self.listOfMsgExchangeClients:
           if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(msgSocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
             self.msgClientAndUsernames.append((client,username))
-            print(f"{username} just authenticated using Chap!")
+        for client in self.listOfKeyExchangeClients2:
+          if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(keySocket2).split("laddr=(")[1].split(", ")[1].split(")")[0]:
+            self.keyClientAndUsernames2.append((client,username))
+        print(f"{username} just authenticated using Chap!")
         return {'code': 0,'args': "Authentication successful."}
       else:
         return {'code': 1,'args': "Authentication failed."}
     except Exception as e:
+      print(e)
       return {'code': 1,'args': "An unknown error occurred."}
 
   def getUserSecret(self, username):
@@ -597,6 +604,7 @@ class ClientHandler:
         mainSocket = args[2]
         keySocket  = args[3]
         msgSocket  = args[4]
+        keySocket2 = args[5]
         P,B,e,publicKey,x = self.getSchnorrParameters2(username)
         z = (pow(B,y) * pow(publicKey,e)) % P
 
@@ -612,6 +620,9 @@ class ClientHandler:
           for client in self.listOfMsgExchangeClients:
             if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(msgSocket).split("laddr=(")[1].split(", ")[1].split(")")[0]:
               self.msgClientAndUsernames.append((client,username))
+          for client in self.listOfKeyExchangeClients2:
+            if str(client).split("raddr=(")[1].split(",")[1].split(")>")[0].split(" ")[1] == str(keySocket2).split("laddr=(")[1].split(", ")[1].split(")")[0]:
+              self.keyClientAndUsernames2.append((client,username))
           print(f"{username} just authenticated using Schnorr!")
           return {'code': 0,'args': "Authentication successful."}
         else:

@@ -12,7 +12,7 @@ import os.path
 
 class ChatClient:
   # == Methods ==
-  def __init__(self,ip,mainSocketPort,keySocketPort,msgSocketPort,msgHistorySocketPort,menuHandler,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey):
+  def __init__(self,ip,mainSocketPort,keySocketPort,keySocketPort2,msgSocketPort,msgHistorySocketPort,menuHandler,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey):
     """Initialize a socket connection with the server.
     Parameters
     ----------
@@ -40,10 +40,12 @@ class ChatClient:
     self.ip                  = ip
     self.mainSocketPort      = int(mainSocketPort)
     self.keySocketPort       = int(keySocketPort)
+    self.keySocketPort2       = int(keySocketPort2)
     self.msgSocketPort       = int(msgSocketPort)
     self.msgHistorySocketPort = int(msgHistorySocketPort)
     self.mainSocket = []
     self.keySocket = []
+    self.keySocket2 = []
     self.msgSocket  = []
     self.msgHistorySocket  = []
     self.menuHandler         = menuHandler
@@ -54,20 +56,22 @@ class ChatClient:
     self.ivKey               = ivKey
     self.currChattingFriend  = [None]
     self.canBazar = [False]
-    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.msgSocket,self.msgHistorySocket,self.menuHandler,self.username,self.clientKeysPath,self.rsaKeySizeBits,self.elGamalKeySizeBits,self.ivKey,self.currChattingFriend,self.canBazar)
-    self.keyOptionHandler = KeyOptionHandler(self.keySocket,self.clientKeysPath,self.username,self.canBazar)
+    self.clientOptionHandler = ClientOptionHandler(self.mainSocket,self.keySocket,self.keySocket2,self.msgSocket,self.msgHistorySocket,self.menuHandler,self.username,self.clientKeysPath,self.rsaKeySizeBits,self.elGamalKeySizeBits,self.ivKey,self.currChattingFriend,self.canBazar)
+    self.keyOptionHandler = KeyOptionHandler(self.keySocket,self.keySocket2,self.clientKeysPath,self.username,self.canBazar)
     self.msgOptionHandler = MsgOptionHandler(self.msgSocket,self.clientKeysPath,self.username,self.menuHandler,self.currChattingFriend,self.canBazar)
   
   def runClient(self):
     """Run the client, initializing its threads."""
     thread1 = threading.Thread(target = self.runMainThread)
     thread2 = threading.Thread(target = self.runKeyThread)
+    thread5 = threading.Thread(target = self.runKeyThread2)
     thread3 = threading.Thread(target = self.runMsgThread)
     thread4 = threading.Thread(target = self.runMsgHistoryThread)
     thread1.start()
     thread2.start()
     thread3.start()
     thread4.start()
+    thread5.start()
   
   def runMainThread(self):
     """Run the main thread of the client, which handles the menus."""
@@ -126,6 +130,18 @@ class ChatClient:
       else:
         self.keySocket[0] = s2 
       self.keyOptionHandler.handleClientKeyExchange()
+  
+  def runKeyThread2(self):
+    """Run the key thread of the client, which handles the key exchange."""
+    with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s5:
+      s5.connect((self.ip,self.keySocketPort2))
+      if self.keySocket2 == []:
+        self.keySocket2.append(s5)
+      else:
+        self.keySocket2[0] = s5
+      while True:
+        if self.canBazar[0]:
+          exit(0)
 
   def runMsgThread(self):
     """Run the key thread of the client, which handles the key exchange."""

@@ -2,7 +2,7 @@ from src.ellipticCurves import EllipticCurves
 import pickle
 class KeyExchangeHandler:
   # == Methods ==
-  def __init__(self,con,cur,connectedUsernames,keyClientAndUsernames):
+  def __init__(self,con,cur,connectedUsernames,keyClientAndUsernames,keyClientAndUsernames2):
     """Initalize handler.
     
     Parameters
@@ -24,6 +24,7 @@ class KeyExchangeHandler:
     self.cur                   = cur
     self.connectedUsernames    = connectedUsernames
     self.keyClientAndUsernames = keyClientAndUsernames
+    self.keyClientAndUsernames2 = keyClientAndUsernames2
 
   def process(self,option,args = None):
     """Process an option received by the client and call the appropriate client handler method.
@@ -74,13 +75,11 @@ class KeyExchangeHandler:
       friendUsername = args[1]
       X = args[2]
       keyType = args[3]
-      if friendUsername not in self.connectedUsernames:
-        return {'code': 1,'args': "Friend is not online."}
       for host,u in self.keyClientAndUsernames:
         if u == friendUsername:
           host.send(pickle.dumps({'code': 2,'args': (username,X,keyType)}))
           return host
-    except Exception as e:
+    except Exception:
       return {'code': 1,'args': "An unknown error occurred."}
   
   def exchangeKeys2(self,args):
@@ -107,8 +106,8 @@ class KeyExchangeHandler:
     try:
       username = args[0]
       Y = args[1]
-      for _,u in self.keyClientAndUsernames:
+      for host,u in self.keyClientAndUsernames2:
         if u == username:
-          return {'code': 0,'args': (Y,)}
-    except Exception as e:
+          host.send(pickle.dumps({'code': 0,'args': (Y,)}))
+    except Exception:
       return {'code': 1,'args': "An unknown error occurred."}

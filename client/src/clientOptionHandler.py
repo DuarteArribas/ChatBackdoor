@@ -31,7 +31,7 @@ class ClientOptionHandler:
   NUMBER_BYTES_TO_RECEIVE = 16384
   
   # == Methods ==
-  def __init__(self,mainSocket,keySocket,msgSocket,msgHistorySocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey,currChattingFriend,canBazar):
+  def __init__(self,mainSocket,keySocket,keySocket2,msgSocket,msgHistorySocket,menuHandler,username,clientKeysPath,rsaKeySizeBits,elGamalKeySizeBits,ivKey,currChattingFriend,canBazar):
     """Initalize handler.
     
     Parameters
@@ -64,6 +64,7 @@ class ClientOptionHandler:
     self.mainSocket = mainSocket
     self.menuHandler    = menuHandler
     self.keySocket  = keySocket
+    self.keySocket2 = keySocket2
     self.msgSocket  = msgSocket
     self.msgHistorySocket = msgHistorySocket
     self.username       = username
@@ -193,7 +194,8 @@ class ClientOptionHandler:
       challenge,
       str(self.mainSocket[0]),
       str(self.keySocket[0]),
-      str(self.msgSocket[0])
+      str(self.msgSocket[0]),
+      str(self.keySocket2[0])
     ))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
@@ -281,7 +283,7 @@ class ClientOptionHandler:
     y = ((privateKey * e) + r) % Q
 
     # 6 - Sends the response to the server 
-    self.mainSocket[0].send(pickle.dumps(OptionArgs(16,(username,y,str(self.mainSocket[0]),str(self.keySocket[0]),str(self.msgSocket[0])))))
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(16,(username,y,str(self.mainSocket[0]),str(self.keySocket[0]),str(self.msgSocket[0]),str(self.keySocket2[0])))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
@@ -387,7 +389,7 @@ class ClientOptionHandler:
   
   def logout(self):
     """Logs user out."""
-    self.mainSocket[0].send(pickle.dumps(OptionArgs(9,(self.username[0],str(self.mainSocket[0]),str(self.keySocket[0]),str(self.msgSocket[0])))))
+    self.mainSocket[0].send(pickle.dumps(OptionArgs(9,(self.username[0],str(self.mainSocket[0]),str(self.keySocket[0]),str(self.msgSocket[0]),str(self.keySocket2[0])))))
     optionArgs = pickle.loads(self.mainSocket[0].recv(ClientOptionHandler.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
@@ -479,7 +481,7 @@ class ClientOptionHandler:
     ec   = EllipticCurves()
     X,dA = ec.generateKeys()
     self.keySocket[0].send(pickle.dumps(OptionArgs(0,(self.username[0],friendToChat,X,keyType))))
-    optionArgs = pickle.loads(self.keySocket[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
+    optionArgs = pickle.loads(self.keySocket2[0].recv(self.NUMBER_BYTES_TO_RECEIVE))
     if optionArgs["code"] == 1:
       print(optionArgs["args"])
       return False
