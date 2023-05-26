@@ -64,7 +64,7 @@ sequenceDiagram
     S ->> C: envia mensagem de sucesso
 ```
 
-- O servidor inicializa três threads: principal, chaves, mensagens. Assim será possível a cada utilizador usar o chat com vários utilizadores simultaneamente.
+- O servidor inicializa quatro threads: principal, chaves (2 threads), mensagens. Assim será possível a cada utilizador usar o chat com vários utilizadores simultaneamente.
 
 ---
 
@@ -110,7 +110,7 @@ sequenceDiagram
             note right of S: desafio diferente (d1 != d2) == palavra passe incorreta
             S ->> C: envia novo pedido de credenciais (palavra-passe)
         end
-        S ->> S: guarda o nome de utilizador na lista de utilizadores online <br> guarda o nome de utilizador e socket de chaves numa lista <br> guarda o nome de utilizador e socket de mensagens numa lista
+        S ->> S: guarda o nome de utilizador na lista de utilizadores online <br> guarda o nome de utilizador e socket de chaves em listas <br> guarda o nome de utilizador e socket de mensagens numa lista
 
     else Protocolo de Conhecimento Zero (Schnorr)
         loop Verificação do nome de utilizador
@@ -139,13 +139,13 @@ sequenceDiagram
             note right of S: z != x significa que cliente não é quem diz ser <br> (não sabe de facto a chave privada)
             S ->> C: envia novo pedido de credenciais (nome de utilizador)
         end
-        S ->> S: guarda o nome de utilizador na lista de utilizadores online <br> guarda o nome de utilizador e socket de chaves numa lista <br> guarda o nome de utilizador e socket de mensagens numa lista
+        S ->> S: guarda o nome de utilizador na lista de utilizadores online <br> guarda o nome de utilizador e socket de chaves em listas <br> guarda o nome de utilizador e socket de mensagens numa lista
     end
     
     S ->> C: envia mensagem de sucesso
 ```
 
-- O servidor inicializa três threads: principal, chaves, mensagens. Assim, será possível a cada utilizador usar o chat com vários utilizadores simultaneamente.
+- O servidor inicializa quatro threads: principal, chaves (2 threads), mensagens. Assim, será possível a cada utilizador usar o chat com vários utilizadores simultaneamente.
 
 ### Diagrama de Troca de Mensagens
 
