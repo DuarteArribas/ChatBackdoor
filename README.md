@@ -24,7 +24,7 @@ The project can be checked on [GitHub](https://github.com/DuarteArribas/ChatBack
 
 ## Running the project
 
-The project is composed by two pieces of software, namely, *Server* and *Client*. First, the project dependencies must be installed and the database initialized by running `make setup`.
+The project is composed by two pieces of software, namely, *Server* and *Client*. After running `cd ChatWithBackdoor`, the project dependencies must be installed and the database initialized by running `make setup`.
 
 Then, the server and client(s) may be run by running `make runServer` and `make runClient`, respectively.
 
