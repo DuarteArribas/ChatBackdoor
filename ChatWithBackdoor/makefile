@@ -3,6 +3,7 @@ PYTHON           := python3
 PIP              := pip3
 #python main files
 SERVER_MAIN_FILE := server.py
+DB_FILE          := dbinit.py
 CLIENT_MAIN_FILE := client.py
 #directories
 SERVER_DIR       := server
@@ -17,6 +18,7 @@ runClient:
 
 setup:
 	$(PIP) install -r requirements.txt
+	$(PYTHON) $(SERVER_DIR)/$(DB_FILE)
 
 testServer:
 	$(PYTHON) -m unittest $(SERVER_DIR)/$(TEST_DIR)/test_$(tf).py > /dev/null
